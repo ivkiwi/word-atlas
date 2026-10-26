@@ -48,7 +48,7 @@ export function Practice() {
     setRound(null);
     setLoading(true);
     setError(null);
-    const ids = shuffle(pool.slice(0, 60), hashSeed(String(Date.now()))).slice(0, 10);
+    const ids = shuffle(source === "path" || source === "saved" ? pool : pool.slice(0, 60), hashSeed(String(Date.now()))).slice(0, 10);
     const loaded = await prefetch(atlas, ids);
     setLoading(false);
     if (loaded.some((e) => !e)) {
@@ -134,6 +134,8 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
   const [totals, setTotals] = useState(totalsRef.current);
   const [done, setDone] = useState(false);
   const started = useRef<number | null>(null);
+  const completed = useRef(false);
+  const nextTimer = useRef<number | undefined>(undefined);
   const input = useRef<HTMLInputElement>(null);
   const e = entries[i];
   const target = mode === "word" ? e.w : e.ex[0].en;
@@ -141,14 +143,18 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
   useEffect(() => {
     setValue("");
     started.current = null;
+    completed.current = false;
     input.current?.focus();
     if (mode === "dictation") void play(atlas.audio(e, "ex"), e.ex[0].en, settings.accent);
     if (mode === "word" && settings.autoplay) void play(atlas.audio(e, settings.accent), e.w, settings.accent);
   }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => stopAudio(), []);
+  useEffect(() => () => {
+    window.clearTimeout(nextTimer.current);
+    stopAudio();
+  }, []);
 
   const onChange = (next: string) => {
-    if (done) return;
+    if (done || completed.current) return;
     if (started.current === null && next) started.current = performance.now();
     const d = typingDelta(value, next, target);
     if (settings.sfx && d.total > 0) void cue("key");
@@ -160,6 +166,8 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
   };
 
   const finishItem = (final: string) => {
+    if (completed.current) return;
+    completed.current = true;
     const ms = started.current ? performance.now() - started.current : 0;
     const accepted = correctCharacterCount(final, target);
     if (settings.sfx) void cue("correct");
@@ -171,7 +179,7 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
       setDone(true);
       const m = typingMetrics(nt.correct, nt.typed, nt.accepted, nt.ms);
       store.progress((p) => ({ ...p, typing: [...p.typing, { at: Date.now(), mode, items: entries.length, wpm: m.wpm, accuracy: m.accuracy }].slice(-500) }));
-    } else window.setTimeout(() => setI(i + 1), 260);
+    } else nextTimer.current = window.setTimeout(() => setI(i + 1), 260);
   };
 
   const m = typingMetrics(totals.correct, totals.typed, totals.accepted, totals.ms);

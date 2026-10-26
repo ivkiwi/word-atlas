@@ -143,6 +143,7 @@ try {
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Сбросить прогресс", exact: true }).click();
   await page.waitForFunction((key) => Object.keys(JSON.parse(localStorage.getItem(key) || "{}").cards || {}).length === 0, progressKey);
+  page.once("dialog", (dialog) => dialog.accept());
   await page.locator('input[type="file"]').setInputFiles(backup);
   await page.waitForFunction(({ key, count }) => Object.keys(JSON.parse(localStorage.getItem(key) || "{}").cards || {}).length === count, { key: progressKey, count: originalCards });
   assertions += 3;
@@ -203,19 +204,28 @@ try {
     await failure.close();
   }
 
-  const voice = await makeContext(375, "light", { splash: true, sfx: true });
-  await voice.addInitScript(() => {
-    window.__spoken = [];
-    speechSynthesis.getVoices = () => [];
-    speechSynthesis.speak = (utterance) => { window.__spoken.push({ text: utterance.text, lang: utterance.lang }); setTimeout(() => utterance.onend?.(new Event("end")), 0); };
-  });
-  const voicePage = await voice.newPage();
-  await voicePage.goto(app, { waitUntil: "networkidle" });
-  await voicePage.locator(".splash").click({ position: { x: 180, y: 250 } });
-  await voicePage.waitForFunction(() => window.__spoken.length > 0);
-  assert.deepEqual(await voicePage.evaluate(() => window.__spoken[0]), { text: "Добро пожаловать в Атлас слов.", lang: "ru-RU" });
-  await voice.close();
-  assertions++;
+  // Russian lines are spoken only with a Russian device voice; otherwise they stay silent.
+  for (const voices of [[{ lang: "ru-RU", name: "Milena" }], [{ lang: "en-GB", name: "Daniel" }]]) {
+    const voice = await makeContext(375, "light", { splash: true, sfx: true });
+    await voice.addInitScript((voices) => {
+      window.__spoken = [];
+      speechSynthesis.getVoices = () => voices;
+      Object.defineProperty(SpeechSynthesisUtterance.prototype, "voice", { configurable: true, get() { return this.__voice ?? null; }, set(v) { this.__voice = v; } });
+      speechSynthesis.speak = (utterance) => { window.__spoken.push({ text: utterance.text, lang: utterance.lang }); setTimeout(() => utterance.onend?.(new Event("end")), 0); };
+    }, voices);
+    const voicePage = await voice.newPage();
+    await voicePage.goto(app, { waitUntil: "networkidle" });
+    await voicePage.locator(".splash").click({ position: { x: 180, y: 250 } });
+    if (voices[0].lang === "ru-RU") {
+      await voicePage.waitForFunction(() => window.__spoken.length > 0);
+      assert.deepEqual(await voicePage.evaluate(() => window.__spoken[0]), { text: "Добро пожаловать в Атлас слов.", lang: "ru-RU" });
+    } else {
+      await voicePage.waitForTimeout(1500);
+      assert.deepEqual(await voicePage.evaluate(() => window.__spoken.filter((s) => s.lang === "ru-RU")), []);
+    }
+    await voice.close();
+    assertions++;
+  }
   console.log(`Russian UI checks passed: ${assertions} assertions. Screenshots: ${path.relative(root, output)}`);
 } finally {
   await browser.close();

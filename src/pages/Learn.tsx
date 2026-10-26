@@ -22,10 +22,15 @@ export function Learn() {
   const atlas = useAtlas();
   const session = useStore((s) => s.progress.session);
   const [ready, setReady] = useState(false);
+  const initialized = useRef(false);
 
   useEffect(() => {
     const { progress, settings } = store.get();
     if (!progress.session) {
+      if (initialized.current) {
+        go({ page: "today" }, null, true);
+        return;
+      }
       const s = buildSession(atlas, progress, settings);
       if (!s.steps.length) {
         go({ page: "today" }, null, true);
@@ -33,7 +38,8 @@ export function Learn() {
       }
       store.progress((p) => ({ ...p, session: s }));
     }
-  }, [atlas]);
+    initialized.current = true;
+  }, [atlas, session?.id]);
 
   const ids = useMemo(() => [...new Set(session?.steps.map((s) => s.id) ?? [])], [session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -97,10 +103,11 @@ function Intro({ step }: { step: Step }) {
     if (entry && settings.autoplay) void play(atlas.audio(entry, settings.accent), entry.w, settings.accent);
   }, [entry, atlas, settings.autoplay, settings.accent]);
   const next = useCallback(() => {
+    if (!entry) return;
     stopAudio();
     if (store.get().settings.sfx) void cue("flip");
     advance(elapsed());
-  }, [elapsed]);
+  }, [elapsed, entry]);
   useKeys({ Enter: next, " ": next });
   if (!entry) return <EntryStatus error={error} />;
   return (
@@ -150,7 +157,7 @@ function Quiz({ step, session }: { step: Step & { kind: QuizKind }; session: Act
 
   const submit = useCallback(
     (value: string, correct: boolean) => {
-      if (pending) return;
+      if (!entry || pending) return;
       const ms = elapsed() * 1000;
       if (correct) {
         const el = document.querySelector<HTMLElement>(step.kind === "spell" ? ".slots" : `[data-option="${value}"]`);
@@ -165,9 +172,10 @@ function Quiz({ step, session }: { step: Step & { kind: QuizKind }; session: Act
   );
 
   const next = useCallback(() => {
+    if (!entry || !pending) return;
     stopAudio();
     advance(elapsed());
-  }, [elapsed]);
+  }, [elapsed, entry, pending]);
 
   useEffect(() => {
     if (step.kind === "listen" && entry && !pending) void play(atlas.audio(entry, settings.accent), entry.w, settings.accent);

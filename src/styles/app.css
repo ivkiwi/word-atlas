@@ -558,6 +558,7 @@ code {
   z-index: 30;
   height: var(--top);
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 16px;
   padding: 0 max(var(--gutter), calc((100vw - 1200px) / 2 + var(--gutter)));
@@ -568,6 +569,7 @@ code {
   transition: border-color 0.3s;
 }
 .topbar-logo {
+  flex-shrink: 0;
   margin-right: 8px;
   border-radius: 10px;
 }
@@ -597,6 +599,8 @@ code {
 }
 .topnav {
   display: none;
+  flex-shrink: 0;
+  white-space: nowrap;
   gap: 4px;
   margin-left: 8px;
 }
@@ -622,8 +626,84 @@ code {
 .topbar-tools {
   margin-left: auto;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 4px;
+}
+.profile-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+.profile-switch svg {
+  display: none;
+}
+.profile-select {
+  max-width: 7.5rem;
+  height: 38px;
+  padding-inline: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 1200px) {
+  .topbar .search-pill {
+    min-width: 176px;
+  }
+}
+@media (max-width: 1199px) {
+  .topbar-logo small {
+    display: none;
+  }
+  .topbar .search-pill {
+    width: 40px;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    justify-content: center;
+  }
+  .topbar .search-pill span,
+  .topbar .search-pill kbd {
+    display: none;
+  }
+}
+@media (max-width: 599px) {
+  .topbar {
+    gap: 6px;
+  }
+  .topbar-tools {
+    gap: 2px;
+  }
+  .topbar-logo {
+    margin-right: 0;
+  }
+  /* Phones: the profile switch shrinks to an icon over a transparent native select. */
+  .profile-switch {
+    width: 40px;
+    height: 40px;
+    color: var(--ink-2);
+  }
+  .profile-switch svg {
+    display: block;
+  }
+  .profile-switch:focus-within {
+    outline: 2px solid var(--terra);
+    outline-offset: 2px;
+  }
+  .profile-switch .profile-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    opacity: 0;
+  }
+}
+@media (max-width: 359px) {
+  .topbar-logo .logo-text {
+    display: none;
+  }
 }
 .search-pill {
   display: none;
@@ -2967,6 +3047,10 @@ code {
   display: grid;
   gap: 10px;
   justify-items: center;
+}
+.typing-ru .link {
+  position: relative;
+  z-index: 1;
 }
 .typing-text {
   font: 400 clamp(22px, 3.6vw, 32px) / 1.6 var(--mono);

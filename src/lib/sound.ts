@@ -51,12 +51,11 @@ function load(file: string) {
   let p = buffers.get(file);
   if (!p) {
     const c = audio();
-    p = c
-      ? fetch(BASE + file)
-          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
-          .then((b) => c.decodeAudioData(b))
-          .catch(() => null)
-      : Promise.resolve(null);
+    if (!c) return Promise.resolve(null);
+    p = fetch(BASE + file)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+      .then((b) => c.decodeAudioData(b))
+      .catch(() => { buffers.delete(file); return null; });
     buffers.set(file, p);
   }
   return p;
@@ -102,6 +101,7 @@ export async function cue(name: Cue) {
 /* ---------- ambience ---------- */
 
 let amb: { id: AmbienceId; src: AudioBufferSourceNode; gain: GainNode } | null = null;
+let ambToken = 0;
 let ambVolume = 0.5;
 let ducked = false;
 const level = () => ambVolume * (ducked ? 0.35 : 1) * 0.9;
@@ -114,6 +114,7 @@ function fadeTo(g: GainNode, v: number, seconds: number) {
 }
 
 export async function setAmbience(id: AmbienceId | null, volume = ambVolume) {
+  const mine = ++ambToken;
   ambVolume = volume;
   if (amb && amb.id === id) {
     fadeTo(amb.gain, level(), 0.4);
@@ -129,7 +130,7 @@ export async function setAmbience(id: AmbienceId | null, volume = ambVolume) {
   const c = audio();
   if (!c || !master) return;
   const buf = await load(`amb-${id}.mp3`);
-  if (!buf || amb) return;
+  if (!buf || mine !== ambToken) return;
   const src = c.createBufferSource();
   src.buffer = buf;
   src.loop = true;

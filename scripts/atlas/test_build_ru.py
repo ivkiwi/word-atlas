@@ -1,9 +1,12 @@
 import copy
+import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import build_ru
 from build_ru import merge_entry, merge_parts
 
 
@@ -38,6 +41,42 @@ class RussianAtlasTest(unittest.TestCase):
             part.write_text(part.read_text() * 2, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "Duplicate"):
                 merge_parts([self.source], directory)
+
+    def test_build_search_and_revision_preserve_index_contract(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            (root / "data/ru").mkdir(parents=True)
+            public = root / "public/atlas"
+            (public / "entries").mkdir(parents=True)
+            source = copy.deepcopy(self.source)
+            source["senses"].append({"pos": "n.", "zh": "收藏", "en": "A collection."})
+            translation = {**self.translation, "senses": ["библиотека", "коллекция"]}
+            (root / "data/word-atlas.json").write_text(json.dumps([source]))
+            part = root / "data/ru/part-01.jsonl"
+            part.write_text(json.dumps(translation))
+            row = ["library", "library", "old meaning", "/ipa/", 0, 0, 31]
+            index = {"id": "word-atlas-open", "chunk": 1, "words": [row], "topics": [["education", "Education"]], "fields": ["id", "word", "ru", "ipa", "cefr", "topic", "media"]}
+            (public / "index.json").write_text(json.dumps(index))
+            with patch.object(build_ru, "ROOT", root):
+                build_ru.main()
+                first = json.loads((public / "index.json").read_text())
+                self.assertEqual(first["id"], index["id"])
+                self.assertEqual(first["words"][0][:7], row[:2] + ["сущ. библиотека"] + row[3:])
+                self.assertEqual(first["fields"], index["fields"] + ["search"])
+                self.assertEqual(first["words"][0][7], "библиотека; коллекция")
+                self.assertEqual(first["rev"], hashlib.sha256((public / "entries/0.json").read_bytes()).hexdigest())
+                build_ru.main()
+                self.assertEqual(json.loads((public / "index.json").read_text()), first)
+                translation["senses"][1] = "собрание"
+                part.write_text(json.dumps(translation))
+                build_ru.main()
+                second = json.loads((public / "index.json").read_text())
+                self.assertNotEqual(second["rev"], first["rev"])
+                self.assertEqual(second["words"][0][:7], first["words"][0][:7])
+                translation["ex"] = ["Я взяла книгу."]
+                part.write_text(json.dumps(translation))
+                build_ru.main()
+                self.assertNotEqual(json.loads((public / "index.json").read_text())["rev"], second["rev"])
 
 
 if __name__ == "__main__":

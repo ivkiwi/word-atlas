@@ -188,6 +188,12 @@ export class GalaxyEngine {
   hover = -1;
   autoRotate: number;
   onFrame?: () => void;
+  private onContextLost = (event: Event) => { event.preventDefault(); };
+  private onContextRestored = () => {
+    if (!this.gl) return;
+    this.initGL(this.gl);
+    this.resize();
+  };
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -202,6 +208,8 @@ export class GalaxyEngine {
       try {
         this.initGL(gl);
         this.gl = gl;
+        canvas.addEventListener("webglcontextlost", this.onContextLost);
+        canvas.addEventListener("webglcontextrestored", this.onContextRestored);
       } catch {
         this.gl = null;
       }
@@ -321,6 +329,8 @@ export class GalaxyEngine {
   /** Stop drawing. The context stays alive: the same canvas may be mounted again (React StrictMode). */
   destroy() {
     this.stop();
+    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
     this.onFrame = undefined;
   }
 
@@ -391,6 +401,7 @@ export class GalaxyEngine {
   }
 
   private frame(now: number) {
+    if (this.gl?.isContextLost()) return;
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     const t = (now - this.t0) / 1000;

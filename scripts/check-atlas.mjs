@@ -2,6 +2,7 @@
 /** Validate the public Word Atlas dataset: structure, references and media files. */
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,12 +17,15 @@ const chinese = /\p{Script=Han}/u;
 
 if (index.words.length !== index.count) fail(`count ${index.count} != rows ${index.words.length}`);
 if (index.locale !== "ru-RU" || index.fields[2] !== "ru") fail("Russian locale/schema missing");
+if (JSON.stringify(index.fields) !== JSON.stringify(["id", "word", "ru", "ipa", "cefr", "topic", "media", "search"])) fail("Search index schema changed");
+if (typeof index.rev !== "string" || !/^[a-f0-9]{64}$/.test(index.rev)) fail("Content revision missing or invalid");
 if (index.id !== "word-atlas-open") fail("Dataset ID changed; existing progress would be lost");
 if (russian.length !== source.length || russian.length !== index.count) fail("Russian export is incomplete");
 if (chinese.test(JSON.stringify(index))) fail("Chinese remains in the search index or topics");
 const ids = new Set();
 index.words.forEach((r, i) => {
-  const [id, word, ru, , cefr, topic, media] = r;
+  const [id, word, ru, , cefr, topic, media, search] = r;
+  if (r.length !== 8 || typeof search !== "string" || !search) fail(`bad search text: ${id}`);
   if (!/^[a-z0-9-]{1,64}$/.test(id) || ids.has(id)) fail(`bad or duplicate id at ${i}: ${id}`);
   ids.add(id);
   if (!word || !ru) fail(`empty word or meaning: ${id}`);
@@ -40,13 +44,17 @@ index.words.forEach((r, i) => {
 
 let entries = 0;
 let examples = 0;
+const revision = createHash("sha256");
 for (let n = 0; n * index.chunk < index.count; n++) {
-  const chunk = JSON.parse(fs.readFileSync(path.join(pub, `entries/${n}.json`), "utf8"));
+  const raw = fs.readFileSync(path.join(pub, `entries/${n}.json`));
+  revision.update(raw);
+  const chunk = JSON.parse(raw.toString("utf8"));
   chunk.forEach((e, k) => {
     const row = index.words[n * index.chunk + k];
     if (!row || row[0] !== e.id) return fail(`chunk ${n} out of order at ${e.id}`);
     entries++;
     if (!Array.isArray(e.senses) || !e.senses.length || e.senses.some((s) => !s.ru)) fail(`no Russian senses: ${e.id}`);
+    if (row[2] !== `${e.senses[0]?.pos} ${e.senses[0]?.ru}` || row[7] !== e.senses.map((s) => s.ru).join("; ")) fail(`indexed meanings differ: ${e.id}`);
     if (!Array.isArray(e.ex) || !e.ex.length || e.ex.some((x) => !x.en || !x.ru)) fail(`bad Russian examples: ${e.id}`);
     if (chinese.test(JSON.stringify(e))) fail(`Chinese remains in entry: ${e.id}`);
     const position = n * index.chunk + k;
@@ -67,6 +75,7 @@ for (let n = 0; n * index.chunk < index.count; n++) {
 }
 if (entries !== index.count) fail(`entries ${entries} != count ${index.count}`);
 if (examples !== index.examples) fail(`examples ${examples} != ${index.examples}`);
+if (revision.digest("hex") !== index.rev) fail("Content revision differs from entry chunks");
 
 for (const directory of ["src", "docs"]) {
   for (const entry of fs.readdirSync(path.join(root, directory), { recursive: true, withFileTypes: true })) {

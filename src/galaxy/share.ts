@@ -49,8 +49,12 @@ export async function shareGalaxy(source: HTMLCanvasElement, lit: number, total:
     if (!blob) throw new Error("no blob");
     const file = new File([blob], "word-atlas-galaxy.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file] }).catch(() => null);
-      return;
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch (error) {
+        if ((error as { name?: string } | null)?.name === "AbortError") return;
+      }
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

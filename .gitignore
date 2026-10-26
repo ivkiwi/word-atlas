@@ -11,4 +11,5 @@ output/
 *.tsbuildinfo
 .codegraph/
 .codex/
+.claude/
 __pycache__/

@@ -122,8 +122,12 @@ export async function shareWord(atlas: Atlas, e: Entry) {
     if (!blob) throw new Error("no blob");
     const file = new File([blob], `word-atlas-${e.id}.png`, { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: e.w }).catch(() => null);
-      return;
+      try {
+        await navigator.share({ files: [file], title: e.w });
+        return;
+      } catch (error) {
+        if ((error as { name?: string } | null)?.name === "AbortError") return;
+      }
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

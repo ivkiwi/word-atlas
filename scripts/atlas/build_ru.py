@@ -1,6 +1,7 @@
 """Build the Russian atlas from the original data and authored translation parts."""
 import copy
 import csv
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -95,8 +96,10 @@ def main():
     for entry, row in zip(entries, index["words"]):
         first = entry["senses"][0]
         row[2] = f"{first['pos']} {first['ru']}"
+        row[7:] = ["; ".join(sense["ru"] for sense in entry["senses"])]
     index.update(locale="ru-RU", version=2, name="Word Atlas — Атлас слов")
     index["fields"][2] = "ru"
+    index["fields"][7:] = ["search"]
     index["topics"] = [[key, TOPICS[key]] for key, _ in index["topics"]]
 
     write_json(data / "word-atlas.ru.json", entries, pretty=True)
@@ -106,9 +109,13 @@ def main():
         for entry in entries:
             examples = entry["ex"] + [{"en": "", "ru": ""}] * (2 - len(entry["ex"]))
             writer.writerow([entry["id"], entry["w"], entry["uk"], entry["us"], entry["cefr"], entry["topic"], TOPICS[entry["topic"]], " | ".join(f"{sense['pos']} {sense['ru']}" for sense in entry["senses"]), " | ".join(sense["en"] for sense in entry["senses"]), examples[0]["en"], examples[0]["ru"], examples[1]["en"], examples[1]["ru"], " ; ".join(entry["col"]), " ; ".join(entry["fam"]), ", ".join(entry["syn"]), ", ".join(entry["ant"]), entry["tip"], entry["note"]])
+    revision = hashlib.sha256()
     for start in range(0, len(entries), index["chunk"]):
         chunk = [dict(entry, m=index["words"][start + i][6]) for i, entry in enumerate(entries[start:start + index["chunk"]])]
-        write_json(public / "entries" / f"{start // index['chunk']}.json", chunk)
+        path = public / "entries" / f"{start // index['chunk']}.json"
+        write_json(path, chunk)
+        revision.update(path.read_bytes())
+    index["rev"] = revision.hexdigest()
     write_json(public / "index.json", index)
     print(f"Russian atlas: {len(entries)} entries, {sum(len(entry['ex']) for entry in entries)} examples")
 

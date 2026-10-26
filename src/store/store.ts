@@ -92,14 +92,22 @@ export const emptyProgress = (datasetId: string): Progress => ({
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-const SETTINGS_KEY = "word-atlas:settings";
-const progressKey = (id: string) => `word-atlas:v2:${id}`;
+export interface Profiles {
+  current: string;
+  list: { id: string; name: string }[];
+}
 
-function read<T>(key: string): T | null {
+const PROFILES_KEY = "word-atlas:profiles";
+const profilePrefix = (id: string) => id === "default" ? "word-atlas:" : `word-atlas:p:${id}:`;
+const settingsKey = (profile = state.profiles.current) => `${profilePrefix(profile)}settings`;
+const progressKey = (id: string, profile = state.profiles.current) => `${profilePrefix(profile)}v2:${id}`;
+
+function read<T>(key: string, strict = false): T | null {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return null;
   }
 }
@@ -116,6 +124,18 @@ function write(key: string, value: unknown) {
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const num = (v: unknown, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
+const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
+
+export function sanitizeProfiles(v: unknown): Profiles {
+  const list: Profiles["list"] = [];
+  if (isObj(v) && Array.isArray(v.list)) for (const p of v.list) {
+    if (isObj(p) && typeof p.id === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(p.id) && typeof p.name === "string" && p.name.trim() && !list.some((x) => x.id === p.id))
+      list.push({ id: p.id, name: p.name.trim().slice(0, 40) });
+  }
+  if (!list.length) list.push({ id: "default", name: "Основной" });
+  const current = isObj(v) && list.some((p) => p.id === v.current) ? v.current as string : list[0].id;
+  return { current, list };
+}
 
 function validCard(v: unknown): v is CardState {
   return (
@@ -152,7 +172,16 @@ export function sanitizeProgress(v: unknown, datasetId: string): Progress {
       )
       .slice(-500);
   const s = v.session;
-  if (isObj(s) && typeof s.id === "string" && Array.isArray(s.steps) && num(s.index, 0) && isObj(s.graded))
+  if (
+    isObj(s) && typeof s.id === "string" && num(s.started, 0) && strings(s.newIds) && strings(s.reviewIds) &&
+    Array.isArray(s.steps) && s.steps.every((step) =>
+      isObj(step) && typeof step.id === "string" && ["intro", "meaning", "picture", "listen", "spell"].includes(step.kind as string) &&
+      (step.retry === undefined || typeof step.retry === "boolean") && (step.options === undefined || strings(step.options)),
+    ) && Number.isInteger(s.index) && num(s.index, 0, s.steps.length) &&
+    isObj(s.graded) && Object.values(s.graded).every((grade) => [1, 2, 3, 4].includes(grade as number)) &&
+    (s.pending === undefined || (isObj(s.pending) && typeof s.pending.correct === "boolean" && typeof s.pending.value === "string")) &&
+    (s.finished === undefined || num(s.finished, 0))
+  )
     out.session = s as unknown as ActiveSession;
   return out;
 }
@@ -179,14 +208,17 @@ export function sanitizeSettings(v: unknown): Settings {
 /* ---------- store ---------- */
 
 interface State {
+  profiles: Profiles;
   progress: Progress;
   settings: Settings;
   saveError: boolean;
 }
 
+const profiles = sanitizeProfiles(read(PROFILES_KEY));
 let state: State = {
+  profiles,
   progress: emptyProgress("word-atlas-open"),
-  settings: sanitizeSettings(read(SETTINGS_KEY)),
+  settings: sanitizeSettings(read(settingsKey(profiles.current))),
   saveError: false,
 };
 const listeners = new Set<() => void>();
@@ -206,29 +238,81 @@ function scheduleSave() {
   saveTimer = window.setTimeout(flush, 250);
 }
 
-export function flush() {
-  window.clearTimeout(saveTimer);
-  if (!dirty) return;
-  dirty = false;
-  const progressOk = loadedId !== state.progress.datasetId || write(progressKey(state.progress.datasetId), state.progress);
-  const ok = progressOk && write(SETTINGS_KEY, state.settings);
-  if (ok === state.saveError) {
-    state = { ...state, saveError: !ok };
+function saveError(failed: boolean) {
+  if (state.saveError !== failed) {
+    state = { ...state, saveError: failed };
     emit();
   }
 }
 
+function loadProfile(profiles: Profiles, persist = false) {
+  try {
+    const changed = profiles.current !== state.profiles.current;
+    const id = state.progress.datasetId;
+    const next = changed
+      ? { ...state, profiles, progress: sanitizeProgress(read(progressKey(id, profiles.current), true), id), settings: sanitizeSettings(read(settingsKey(profiles.current), true)), saveError: false }
+      : { ...state, profiles };
+    if (persist && !write(PROFILES_KEY, profiles)) {
+      saveError(true);
+      return false;
+    }
+    if (changed) {
+      window.clearTimeout(saveTimer);
+      dirty = false;
+      loadedId = id;
+    }
+    state = persist ? { ...next, saveError: false } : next;
+    emit();
+    return true;
+  } catch {
+    saveError(true);
+    return false;
+  }
+}
+
+export function flush() {
+  window.clearTimeout(saveTimer);
+  let registered;
+  try { registered = read(PROFILES_KEY, true); } catch { saveError(true); return false; }
+  const profiles = registered ? sanitizeProfiles(registered) : state.profiles;
+  // A deleted profile must not be recreated by a delayed write from another tab.
+  if (!profiles.list.some((p) => p.id === state.profiles.current)) {
+    return loadProfile(profiles);
+  }
+  if (dirty) {
+    const progressOk = loadedId !== state.progress.datasetId || write(progressKey(state.progress.datasetId), state.progress);
+    const ok = progressOk && write(settingsKey(), state.settings);
+    dirty = !ok;
+    saveError(!ok);
+    if (!ok) return false;
+  }
+  if (profiles.current !== state.profiles.current) return loadProfile(profiles);
+  return true;
+}
+
 if (typeof window !== "undefined") {
+  try { void navigator.storage?.persist?.().catch(() => {}); } catch { /* optional browser permission */ }
   window.addEventListener("pagehide", flush);
   document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flush());
-  // Another tab saved: adopt its data instead of keeping a stale copy.
+  // shortcut: pending local edits win conflicts; merge per record if simultaneous edits must preserve both tabs.
   window.addEventListener("storage", (e) => {
-    if (!e.newValue) return;
+    if (e.key === PROFILES_KEY) {
+      let profiles;
+      try { profiles = sanitizeProfiles(read(PROFILES_KEY, true)); } catch { saveError(true); return; }
+      if (profiles.list.some((p) => p.id === state.profiles.current) && !flush()) return;
+      loadProfile(profiles);
+      return;
+    }
+    if (!e.newValue || (e.key !== settingsKey() && e.key !== progressKey(state.progress.datasetId))) return;
+    if (dirty) {
+      flush();
+      return;
+    }
     try {
-      if (e.key === SETTINGS_KEY) state = { ...state, settings: sanitizeSettings(JSON.parse(e.newValue)) };
-      else if (e.key === progressKey(state.progress.datasetId))
-        state = { ...state, progress: sanitizeProgress(JSON.parse(e.newValue), state.progress.datasetId) };
-      else return;
+      const value = localStorage.getItem(e.key);
+      if (!value) return;
+      if (e.key === settingsKey()) state = { ...state, settings: sanitizeSettings(JSON.parse(value)) };
+      else state = { ...state, progress: sanitizeProgress(JSON.parse(value), state.progress.datasetId) };
       emit();
     } catch {
       /* ignore malformed writes */
@@ -241,6 +325,45 @@ export const store = {
   subscribe(l: () => void) {
     listeners.add(l);
     return () => listeners.delete(l);
+  },
+  switchProfile(id: string) {
+    if (!flush()) return false;
+    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    if (!profiles.list.some((p) => p.id === id)) return false;
+    return loadProfile({ ...profiles, current: id }, true);
+  },
+  addProfile(name: string) {
+    name = name.trim();
+    if (!name || name.length > 40 || !flush()) return false;
+    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    const id = crypto.randomUUID();
+    return loadProfile({ current: id, list: [...profiles.list, { id, name }] }, true);
+  },
+  renameProfile(id: string, name: string) {
+    name = name.trim();
+    if (!name || name.length > 40 || !flush()) return false;
+    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    if (!profiles.list.some((p) => p.id === id)) return false;
+    return loadProfile({ ...profiles, list: profiles.list.map((p) => p.id === id ? { ...p, name } : p) }, true);
+  },
+  deleteProfile(id: string) {
+    if (!flush()) return false;
+    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    const list = profiles.list.filter((p) => p.id !== id);
+    if (!list.length || list.length === profiles.list.length) return false;
+    const keys: string[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (id === "default" ? key === settingsKey(id) || key.startsWith("word-atlas:v2:") : key.startsWith(profilePrefix(id)))) keys.push(key);
+      }
+      if (!loadProfile({ current: profiles.current === id ? list[0].id : profiles.current, list }, true)) return false;
+      keys.forEach((key) => localStorage.removeItem(key));
+      return true;
+    } catch {
+      saveError(true);
+      return false;
+    }
   },
   useDataset(datasetId: string) {
     flush();
@@ -291,6 +414,11 @@ export function exportBackup() {
   return JSON.stringify({ app: "word-atlas", version: 2, exported: new Date().toISOString(), progress: { ...progress, session: null }, settings }, null, 1);
 }
 
+export function backupFilename() {
+  const profile = state.profiles.list.find((p) => p.id === state.profiles.current)!;
+  return `word-atlas-${profile.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")}-backup-${dayKey()}.json`;
+}
+
 function markDirty() {
   dirty = true;
 }
@@ -304,6 +432,7 @@ export function importBackup(text: string): { ok: true; cards: number } | { ok: 
   }
   if (!isObj(data) || data.app !== "word-atlas" || data.version !== 2 || !isObj(data.progress))
     return { ok: false, error: "Это не резервная копия Word Atlas." };
+  if (data.progress.version !== 2) return { ok: false, error: "Эта версия прогресса в резервной копии не поддерживается." };
   const id = state.progress.datasetId;
   if (data.progress.datasetId !== id) return { ok: false, error: "Эта копия относится к другому словарю. Сначала выберите его в настройках." };
   const progress = sanitizeProgress({ ...data.progress, session: null }, id);

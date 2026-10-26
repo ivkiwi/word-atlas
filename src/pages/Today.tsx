@@ -1,5 +1,5 @@
 import { ArrowRight, Flame, Keyboard, Sparkles } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { prefetch, useAtlas, useEntry } from "../atlas/context";
 import { go, openWord } from "../lib/router";
 import { cue } from "../lib/sound";
@@ -37,7 +37,23 @@ export function Today() {
   const atlas = useAtlas();
   const progress = useStore((s) => s.progress);
   const settings = useStore((s) => s.settings);
-  const plan = useMemo(() => todayPlan(atlas, progress, settings), [atlas, progress, settings]);
+  const [time, setTime] = useState(Date.now);
+  const plan = useMemo(() => todayPlan(atlas, progress, settings), [atlas, progress, settings, time]);
+  useEffect(() => {
+    const refresh = () => setTime(Date.now());
+    const now = Date.now();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const next = Object.values(progress.cards).reduce((at, c) => c.due > now ? Math.min(at, c.due) : at, midnight.getTime());
+    const timer = window.setTimeout(refresh, Math.max(1, next - now));
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [progress.cards, time]);
   // Warm the first cards of today's journey so the session opens instantly.
   const firstIds = [...plan.due.slice(0, 4), ...plan.fresh.slice(0, 6)].join(",");
   useEffect(() => {

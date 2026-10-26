@@ -1,7 +1,7 @@
 export type Accent = "uk" | "us";
 
-/** Compact row from atlas/index.json: [id, word, ru, ipa, cefr, topic, media]. */
-export type IndexRow = [string, string, string, string, number, number, number];
+/** Compact row from atlas/index.json: [id, word, ru, ipa, cefr, topic, media, search]. */
+export type IndexRow = [string, string, string, string, number, number, number, string];
 
 export interface Sense {
   pos: string;
@@ -42,6 +42,8 @@ export interface WordRef {
   id: string;
   word: string;
   ru: string;
+  /** All Russian senses; private datasets can use ru alone. */
+  search?: string;
   ipa: string;
   cefr: number;
   topic: number;

@@ -80,8 +80,12 @@ export async function shareSession(atlas: Atlas, s: ActiveSession) {
     if (!blob) throw new Error();
     const file = new File([blob], `word-atlas-${d.toISOString().slice(0, 10)}.png`, { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file] }).catch(() => null);
-      return;
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch (error) {
+        if ((error as { name?: string } | null)?.name === "AbortError") return;
+      }
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

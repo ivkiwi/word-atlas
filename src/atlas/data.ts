@@ -6,6 +6,7 @@ const url = (p: string) => `${BASE}/atlas/${p}`;
 
 interface IndexFile {
   id: string;
+  rev: string;
   name: string;
   count: number;
   examples: number;
@@ -17,7 +18,7 @@ interface IndexFile {
 }
 
 export async function loadOpenAtlas(): Promise<Atlas> {
-  const res = await fetch(url("index.json?v=ru-2")).catch(() => {
+  const res = await fetch(url("index.json"), { cache: "no-cache" }).catch(() => {
     throw new Error("Не удалось загрузить словарь. Проверьте подключение к сети и перезагрузите страницу.");
   });
   if (!res.ok) throw new Error(`Не удалось загрузить индекс словаря (HTTP ${res.status}). Попробуйте перезагрузить страницу.`);
@@ -32,6 +33,7 @@ export async function loadOpenAtlas(): Promise<Atlas> {
     cefr: r[4],
     topic: r[5],
     media: r[6],
+    search: r[7],
     order,
   }));
   const byId = new Map(words.map((w) => [w.id, w]));
@@ -41,7 +43,7 @@ export async function loadOpenAtlas(): Promise<Atlas> {
   const loadChunk = (n: number) => {
     let p = pending.get(n);
     if (!p) {
-      p = fetch(url(`entries/${n}.json?v=ru-2`))
+      p = fetch(url(`entries/${n}.json?v=${encodeURIComponent(idx.rev)}`))
         .then((r) => {
           if (!r.ok) throw new Error(`Не удалось загрузить карточку слова (HTTP ${r.status}). Попробуйте открыть её ещё раз.`);
           return r.json() as Promise<Entry[]>;

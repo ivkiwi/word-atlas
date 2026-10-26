@@ -49,19 +49,19 @@ function quizKind(ref: WordRef, p: Progress, s: Settings, salt: number): QuizKin
   return roll < 50 ? "listen" : hasImg ? "picture" : "meaning";
 }
 
-const meaningCore = (value: string) => normalize(value).replace(/^(?:\p{L}+\.|союз)\s*/u, "").split(/[;,]/)[0].trim().replace(/[.!?]+$/, "");
+const meanings = (value: string) => normalize(value).split(/[;,]/).map((s) => s.trim().replace(/^(?:\p{L}+\.|союз)\s*/u, "").replace(/[.!?]+$/, "").trim()).filter(Boolean);
 
 /** Distractors that look plausible: same level, similar spelling or length, different meaning. */
 export function distractors(atlas: Atlas, ref: WordRef, kind: QuizKind, seed: number) {
   const target = normalize(ref.word);
-  const ruCore = meaningCore(ref.ru);
+  const targetMeanings = new Set(meanings(ref.ru));
   const scored: [number, WordRef][] = [];
   const pool = atlas.words;
   const start = Math.max(0, ref.order - 400);
   for (let i = start; i < Math.min(pool.length, ref.order + 400); i++) {
     const w = pool[i];
     if (w.id === ref.id || normalize(w.word) === target) continue;
-    if (ruCore && normalize(w.ru).includes(ruCore)) continue;
+    if (meanings(w.ru).some((m) => targetMeanings.has(m))) continue;
     let score = hashSeed(w.id + seed) % 100;
     if (kind === "listen" || kind === "picture") {
       if (w.word[0]?.toLowerCase() === target[0]) score += 120;
@@ -76,9 +76,9 @@ export function distractors(atlas: Atlas, ref: WordRef, kind: QuizKind, seed: nu
   const seen = new Set<string>();
   const picks: string[] = [];
   for (const [, w] of scored) {
-    const key = kind === "meaning" ? meaningCore(w.ru) : normalize(w.word);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const keys = kind === "meaning" ? meanings(w.ru) : [normalize(w.word)];
+    if (keys.some((key) => seen.has(key))) continue;
+    keys.forEach((key) => seen.add(key));
     picks.push(w.id);
     if (picks.length === 3) break;
   }
@@ -122,7 +122,7 @@ export function answer(atlas: Atlas, step: Step & { kind: QuizKind }, correct: b
   const { settings } = store.get();
   store.progress((p) => {
     const sess = p.session;
-    if (!sess) return p;
+    if (!sess || sess.pending || sess.finished || sess.steps[sess.index] !== step) return p;
     let next: Progress = { ...p, session: { ...sess, pending: { correct, value } } };
     const first = !(step.id in sess.graded) && !step.retry;
     if (first) {

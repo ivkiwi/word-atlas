@@ -4,10 +4,10 @@
   "type": "module",
   "description": "Атлас английских слов для IELTS: 7298 слов с русскими переводами, иллюстрациями, аудио и интервальным повторением FSRS.",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --import tsx --test src/**/*.test.ts && python3 scripts/package_public.py --self-test",
     "check:atlas": "node scripts/check-atlas.mjs",
     "check:ui": "node scripts/check-russian-ui.mjs",
     "build:atlas": "python3 scripts/atlas/build_ru.py",

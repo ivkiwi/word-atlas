@@ -84,13 +84,84 @@ def secrets() -> list[bytes]:
     return out
 
 
-def main() -> int:
+def self_test() -> int:
+    import tempfile
+    import unittest
+    from unittest.mock import patch
+
+    class ExportSafetyTest(unittest.TestCase):
+        def setUp(self):
+            tmp = tempfile.TemporaryDirectory(prefix="wa-store-export-")
+            self.addCleanup(tmp.cleanup)
+            self.base = Path(tmp.name).resolve()
+            self.root = self.base / "project"
+            self.root.mkdir()
+            (self.root / "README.md").write_text("public source")
+            root_patch = patch.dict(globals(), ROOT=self.root)
+            root_patch.start()
+            self.addCleanup(root_patch.stop)
+            env_patch = patch.dict(os.environ, ATLAS_SECRET_FILES="")
+            env_patch.start()
+            self.addCleanup(env_patch.stop)
+
+        def test_rejects_project_ancestors_and_descendants(self):
+            sibling = self.base / "sibling.txt"
+            sibling.write_text("keep sibling")
+            (self.base / "PUBLIC_MANIFEST.json").write_text("{}")
+            for out in (self.base, self.root, self.root / "export"):
+                with self.subTest(out=out.name):
+                    self.assertEqual(main(["--out", str(out)]), 2)
+                    self.assertEqual((self.root / "README.md").read_text(), "public source")
+                    self.assertEqual(sibling.read_text(), "keep sibling")
+
+        def test_rejects_unrelated_nonempty_directory(self):
+            out = self.base / "unrelated"
+            out.mkdir()
+            (out / ".git").mkdir()
+            (out / "important.txt").write_text("keep file")
+            self.assertEqual(main(["--out", str(out)]), 2)
+            self.assertEqual((out / "important.txt").read_text(), "keep file")
+
+        def test_resolves_symlink_before_checking_ancestors(self):
+            alias = self.base / "ancestor-link"
+            alias.symlink_to(self.base, target_is_directory=True)
+            self.assertEqual(main(["--out", str(alias)]), 2)
+            self.assertTrue((self.root / "README.md").is_file())
+
+        def test_exports_new_empty_and_previous_export_directories(self):
+            for name in ("new", "empty"):
+                with self.subTest(name=name):
+                    out = self.base / name
+                    if name == "empty":
+                        out.mkdir()
+                    self.assertEqual(main(["--out", str(out)]), 0)
+                    self.assertEqual((out / "README.md").read_text(), "public source")
+                    self.assertEqual(json.loads((out / "PUBLIC_MANIFEST.json").read_text())["files"], 1)
+                    (out / ".git").mkdir()
+                    (out / ".git" / "sentinel").write_text("keep git")
+                    (out / "old.txt").write_text("old export")
+                    self.assertEqual(main(["--out", str(out)]), 0)
+                    self.assertFalse((out / "old.txt").exists())
+                    self.assertEqual((out / ".git" / "sentinel").read_text(), "keep git")
+
+    result = unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromTestCase(ExportSafetyTest))
+    return 0 if result.wasSuccessful() else 1
+
+
+def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True)
-    a = ap.parse_args()
+    action = ap.add_mutually_exclusive_group(required=True)
+    action.add_argument("--out")
+    action.add_argument("--self-test", action="store_true")
+    a = ap.parse_args(argv)
+    if a.self_test:
+        return self_test()
     out = Path(a.out).resolve()
-    if out == ROOT or ROOT in out.parents:
-        print("refusing to export inside the project")
+    if out == ROOT or ROOT in out.parents or out in ROOT.parents:
+        print("refusing to export inside the project or over a project ancestor")
+        return 2
+    if out.exists() and (not out.is_dir() or (any(out.iterdir()) and not (out / "PUBLIC_MANIFEST.json").is_file())):
+        print("refusing to replace a non-empty directory without PUBLIC_MANIFEST.json")
         return 2
     keep_git = (out / ".git").exists()
     if out.exists():

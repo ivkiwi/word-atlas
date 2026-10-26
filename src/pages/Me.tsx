@@ -2,7 +2,7 @@ import { Download, RotateCcw, Upload } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { useAtlas } from "../atlas/context";
 import { isMastered } from "../store/srs";
-import { dayKey, exportBackup, importBackup, resetProgress, store, useStore, type Settings } from "../store/store";
+import { backupFilename, dayKey, exportBackup, importBackup, resetProgress, store, useStore, type Settings } from "../store/store";
 import { toast } from "../ui/Toast";
 import { streakOf } from "./Today";
 
@@ -11,6 +11,8 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
   const progress = useStore((s) => s.progress);
   const settings = useStore((s) => s.settings);
   const saveError = useStore((s) => s.saveError);
+  const profiles = useStore((s) => s.profiles);
+  const profile = profiles.list.find((p) => p.id === profiles.current)!;
   const file = useRef<HTMLInputElement>(null);
 
   const stats = useMemo(() => {
@@ -37,13 +39,17 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
     const blob = new Blob([exportBackup()], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `word-atlas-backup-${dayKey()}.json`;
+    a.download = backupFilename();
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
   const restore = async (f: File) => {
     if (f.size > 30 * 1024 * 1024) return toast("Файл слишком большой для резервной копии. Допустимо до 30 МБ.", "warn");
-    const r = importBackup(await f.text());
+    const profileId = store.get().profiles.current;
+    const text = await f.text();
+    if (store.get().profiles.current !== profileId) return toast("Профиль изменился. Выберите файл резервной копии ещё раз.", "warn");
+    if (!confirm(`Заменить прогресс профиля «${profile.name}» в этом словаре данными из резервной копии? Это действие нельзя отменить. Сначала рекомендуем экспортировать текущий прогресс.`)) return;
+    const r = importBackup(text);
     toast(r.ok ? `Прогресс восстановлен. Слов: ${r.cards.toLocaleString("ru-RU")}` : r.error, r.ok ? "ok" : "warn");
   };
   const maxF = Math.max(1, ...stats.forecast);
@@ -177,6 +183,26 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
               </div>
             </Field>
           )}
+        </section>
+
+        <section className="panel">
+          <h3>Профиль «{profile.name}»</h3>
+          <p className="muted">У каждого профиля свои настройки и прогресс. Профили доступны только на этом устройстве.</p>
+          <div className="data-actions">
+            <button className="btn btn-ghost" onClick={() => {
+              const name = prompt("Новое имя профиля (до 40 символов)", profile.name);
+              if (name === null) return;
+              if (!name.trim() || name.trim().length > 40) return toast("Введите имя от 1 до 40 символов.", "warn");
+              const ok = store.renameProfile(profile.id, name);
+              toast(ok ? "Имя профиля сохранено" : "Не удалось сохранить имя профиля. Проверьте свободное место в браузере.", ok ? "ok" : "warn");
+            }}>Переименовать профиль</button>
+            <button className="btn btn-ghost btn-danger" disabled={profiles.list.length === 1} onClick={() => {
+              if (!confirm(`Удалить профиль «${profile.name}» и весь его прогресс во всех словарях? Это действие нельзя отменить. Сначала рекомендуем экспортировать резервную копию.`)) return;
+              const ok = store.deleteProfile(profile.id);
+              toast(ok ? "Профиль удалён" : "Не удалось полностью удалить профиль. Проверьте доступ к хранилищу браузера.", ok ? "ok" : "warn");
+            }}>Удалить профиль</button>
+          </div>
+          {profiles.list.length === 1 && <p className="muted">Последний профиль удалить нельзя. Чтобы очистить его данные, сбросьте прогресс ниже.</p>}
         </section>
 
         <section className="panel">

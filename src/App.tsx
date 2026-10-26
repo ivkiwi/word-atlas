@@ -1,5 +1,5 @@
 import { BookOpen, ChevronLeft, ChevronRight, Compass, Github, Keyboard, Moon, Search, Sun, User } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AtlasContext, useAtlas, useEntry } from "./atlas/context";
 import { loadOpenAtlas, loadPrivateAtlas } from "./atlas/data";
 import type { Atlas } from "./atlas/types";
@@ -20,7 +20,7 @@ import { Logo } from "./ui/Logo";
 import { Palette } from "./ui/Palette";
 import { Sheet } from "./ui/Sheet";
 import { shouldShowSplash, Splash } from "./ui/Splash";
-import { Toasts } from "./ui/Toast";
+import { toast, Toasts } from "./ui/Toast";
 
 const NAV: { page: Route["page"]; label: string; icon: typeof Compass }[] = [
   { page: "today", label: "Сегодня", icon: Compass },
@@ -93,11 +93,30 @@ export default function App() {
 
 function Shell({ privateAvailable }: { privateAvailable: boolean }) {
   const { route, word } = useLocation();
+  const profiles = useStore((s) => s.profiles);
+  const previousProfile = useRef(profiles.current);
   const onboarded = useStore((s) => s.settings.onboarded);
   const theme = useStore((s) => s.settings.theme);
   const [palette, setPalette] = useState(false);
   const [splash, setSplash] = useState(shouldShowSplash);
   const focus = route.page === "learn";
+
+  useEffect(() => {
+    if (previousProfile.current === profiles.current) return;
+    previousProfile.current = profiles.current;
+    go({ page: "today" }, null, true);
+  }, [profiles.current]);
+
+  const changeProfile = (id: string) => {
+    if (id) {
+      if (!store.switchProfile(id)) toast("Не удалось переключить профиль. Экспортируйте прогресс и проверьте свободное место в браузере.", "warn");
+      return;
+    }
+    const name = prompt("Имя нового профиля (до 40 символов)");
+    if (name === null) return;
+    if (!name.trim() || name.trim().length > 40) return toast("Введите имя от 1 до 40 символов.", "warn");
+    if (!store.addProfile(name)) toast("Не удалось сохранить профиль. Экспортируйте прогресс и проверьте свободное место в браузере.", "warn");
+  };
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -136,6 +155,13 @@ function Shell({ privateAvailable }: { privateAvailable: boolean }) {
             ))}
           </nav>
           <div className="topbar-tools">
+            <span className="profile-switch" title={profiles.list.find((p) => p.id === profiles.current)?.name}>
+              <User size={19} aria-hidden="true" />
+              <select className="btn btn-ghost profile-select" aria-label="Текущий профиль" value={profiles.current} onChange={(e) => changeProfile(e.target.value)}>
+                {profiles.list.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+                <option value="">Добавить профиль</option>
+              </select>
+            </span>
             <button className="search-pill" onClick={() => setPalette(true)} aria-label="Найти слово">
               <Search size={17} />
               <span>Найти слово</span>
