@@ -9,6 +9,8 @@
 
 Бесплатно, с открытым кодом, без регистрации.
 
+### [Открыть атлас →](https://ivkiwi.github.io/word-atlas/)
+
 [Словарь JSON и CSV](data/) · [Формат данных](docs/dataset.md) · [Обучение](docs/learning-model.md)
 
 [Посмотреть русскую версию в действии](docs/assets/demo.mp4)

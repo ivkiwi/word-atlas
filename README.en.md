@@ -1,6 +1,6 @@
 # Word Atlas · Russian edition
 
-[Русская документация](README.md)
+[Русская документация](README.md) · **[Open the atlas](https://ivkiwi.github.io/word-atlas/)**
 
 The Russian edition of [designfuchen/word-atlas](https://github.com/designfuchen/word-atlas): 7,298 English IELTS vocabulary entries, 14,596 examples with Russian translations, illustrations, UK/US audio and FSRS spaced repetition.
 
