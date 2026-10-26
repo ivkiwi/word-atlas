@@ -17,13 +17,17 @@ interface IndexFile {
 }
 
 export async function loadOpenAtlas(): Promise<Atlas> {
-  const res = await fetch(url("index.json"));
-  if (!res.ok) throw new Error(`词库索引加载失败（${res.status}）`);
-  const idx = (await res.json()) as IndexFile;
+  const res = await fetch(url("index.json?v=ru-2")).catch(() => {
+    throw new Error("Не удалось загрузить словарь. Проверьте подключение к сети и перезагрузите страницу.");
+  });
+  if (!res.ok) throw new Error(`Не удалось загрузить индекс словаря (HTTP ${res.status}). Попробуйте перезагрузить страницу.`);
+  const idx = (await res.json().catch(() => {
+    throw new Error("Данные словаря повреждены. Попробуйте перезагрузить страницу.");
+  })) as IndexFile;
   const words: WordRef[] = idx.words.map((r, order) => ({
     id: r[0],
     word: r[1],
-    zh: r[2],
+    ru: r[2],
     ipa: r[3],
     cefr: r[4],
     topic: r[5],
@@ -37,15 +41,17 @@ export async function loadOpenAtlas(): Promise<Atlas> {
   const loadChunk = (n: number) => {
     let p = pending.get(n);
     if (!p) {
-      p = fetch(url(`entries/${n}.json`))
+      p = fetch(url(`entries/${n}.json?v=ru-2`))
         .then((r) => {
-          if (!r.ok) throw new Error(`词条加载失败（${r.status}）`);
+          if (!r.ok) throw new Error(`Не удалось загрузить карточку слова (HTTP ${r.status}). Попробуйте открыть её ещё раз.`);
           return r.json() as Promise<Entry[]>;
         })
         .then((list) => list.forEach((e) => cache.set(e.id, e)))
         .catch((e) => {
           pending.delete(n);
-          throw e;
+          throw e instanceof TypeError || e instanceof SyntaxError
+            ? new Error("Не удалось загрузить карточку слова. Проверьте подключение к сети и откройте её ещё раз.")
+            : e;
         });
       pending.set(n, p);
     }
@@ -68,10 +74,10 @@ export async function loadOpenAtlas(): Promise<Atlas> {
       const hit = cache.get(id);
       if (hit) return hit;
       const ref = byId.get(id);
-      if (!ref) throw new Error(`没有找到词条 ${id}`);
+      if (!ref) throw new Error(`Слово «${id}» не найдено.`);
       await loadChunk(Math.floor(ref.order / idx.chunk));
       const e = cache.get(id);
-      if (!e) throw new Error(`没有找到词条 ${id}`);
+      if (!e) throw new Error(`Слово «${id}» не найдено.`);
       return e;
     },
     img: (ref, size = "full") =>
@@ -116,14 +122,14 @@ export async function loadPrivateAtlas(open: Atlas | null): Promise<Atlas | null
   const words: WordRef[] = cat.words.map((w, order) => {
     const twin = twins.get(w.word.toLowerCase());
     const pos = (w.meaning.match(/·\s*([a-z]+\.)\s*$/) || [])[1] || "";
-    const zh = w.meaning.replace(/\s*·\s*[a-z]+\.\s*$/, "");
+    const ru = w.meaning.replace(/\s*·\s*[a-z]+\.\s*$/, "");
     entries.set(w.id, {
       id: w.id,
       w: w.word,
       uk: w.phonetic,
       us: "",
-      senses: [{ pos, zh, en: "" }],
-      ex: w.sentence ? [{ en: w.sentence, zh: w.translation }] : [],
+      senses: [{ pos, ru, en: "" }],
+      ex: w.sentence ? [{ en: w.sentence, ru: w.translation }] : [],
       col: [],
       fam: [],
       syn: [],
@@ -137,7 +143,7 @@ export async function loadPrivateAtlas(open: Atlas | null): Promise<Atlas | null
     return {
       id: w.id,
       word: w.word,
-      zh: `${pos} ${zh}`.trim(),
+      ru: `${pos} ${ru}`.trim(),
       ipa: w.phonetic,
       cefr: twin?.cefr ?? 2,
       topic: twin?.topic ?? 16,
@@ -154,14 +160,14 @@ export async function loadPrivateAtlas(open: Atlas | null): Promise<Atlas | null
     count: words.length,
     examples: [...entries.values()].reduce((n, e) => n + e.ex.length, 0),
     illustrated: words.filter((w) => w.media & MEDIA.img).length,
-    topics: open?.topics ?? [["thinking", "综合"]],
+    topics: open?.topics ?? [["thinking", "Общее"]],
     cefr: open?.cefr ?? ["A1", "A2", "B1", "B2", "C1", "C2"],
     words,
     byId,
     peek: (id) => entries.get(id),
     entry: async (id) => {
       const e = entries.get(id);
-      if (!e) throw new Error(`没有找到词条 ${id}`);
+      if (!e) throw new Error(`Слово «${id}» не найдено.`);
       return e;
     },
     img: (ref) => pick(ref)?.img ?? null,

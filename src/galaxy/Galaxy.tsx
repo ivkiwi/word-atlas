@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAtlas } from "../atlas/context";
 import type { WordRef } from "../atlas/types";
 import { openWord } from "../lib/router";
-import { cue, playFile } from "../lib/sound";
+import { cue } from "../lib/sound";
+import { play } from "../lib/audio";
 import { isMastered } from "../store/srs";
 import { store, useStore } from "../store/store";
 import { Illustration } from "../ui/Illustration";
@@ -138,7 +139,7 @@ export function Galaxy({
         if (sfx && k < 12) void cue("ignite");
       }, 1400 + k * 180),
     );
-    const voice = window.setTimeout(() => sfx && void playFile("voice-galaxy-lit.mp3", 0.9), 1600 + ids.length * 180);
+    const voice = window.setTimeout(() => sfx && void play(null, "Сегодня на вашей карте зажглись новые звёзды.", "ru"), 1600 + ids.length * 180);
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(voice);
@@ -163,7 +164,7 @@ export function Galaxy({
     } catch {
       return;
     }
-    const t = window.setTimeout(() => store.get().settings.sfx && void playFile("voice-galaxy-hello.mp3", 0.9), 900);
+    const t = window.setTimeout(() => store.get().settings.sfx && void play(null, "Это ваша звёздная карта слов. Изучите слово, чтобы зажечь звезду.", "ru"), 900);
     return () => clearTimeout(t);
   }, [mode]);
 
@@ -293,7 +294,7 @@ export function Galaxy({
         }}
         onWheel={onWheel}
         role="img"
-        aria-label={`词汇星图：${layout.n} 颗星，已点亮 ${lit} 颗。可拖动旋转、滚动缩放，点击星星打开词条。`}
+        aria-label={`Звёздная карта слов. Всего звёзд: ${layout.n}, открыто: ${lit}. Перетаскивайте для вращения, прокручивайте для изменения масштаба. Нажмите на звезду, чтобы открыть слово.`}
         tabIndex={0}
         onKeyDown={(e) => {
           const eng = engine.current;
@@ -322,34 +323,34 @@ export function Galaxy({
           <Illustration src={atlas.img(hover.ref, "thumb")} word={hover.ref.word} topic={hover.ref.topic} />
           <span>
             <b lang="en">{hover.ref.word}</b>
-            <small>{hover.ref.zh}</small>
+            <small>{hover.ref.ru}</small>
           </span>
         </button>
       )}
       <div className="galaxy-hud">
         <p>
-          <b>{lit.toLocaleString()}</b> / {layout.n.toLocaleString()} 颗星已点亮
+          Открыто звёзд: <b>{lit.toLocaleString("ru-RU")}</b> / {layout.n.toLocaleString("ru-RU")}
         </p>
         <ul className="galaxy-legend" aria-hidden="true">
           <li>
             <i className="lg-dust" />
-            未学
+            Не изучалось
           </li>
           <li>
             <i className="lg-learning" />
-            学习中
+            Изучается
           </li>
           <li>
             <i className="lg-mastered" />
-            已掌握
+            Освоено
           </li>
         </ul>
       </div>
       <div className="galaxy-controls">
-        <button className="icon-btn" onClick={() => engine.current && (engine.current.cam.dist = clampDist(engine.current.cam.dist * 0.8))} aria-label="放大">
+        <button className="icon-btn" onClick={() => engine.current && (engine.current.cam.dist = clampDist(engine.current.cam.dist * 0.8))} aria-label="Приблизить">
           <Plus size={18} />
         </button>
-        <button className="icon-btn" onClick={() => engine.current && (engine.current.cam.dist = clampDist(engine.current.cam.dist * 1.25))} aria-label="缩小">
+        <button className="icon-btn" onClick={() => engine.current && (engine.current.cam.dist = clampDist(engine.current.cam.dist * 1.25))} aria-label="Отдалить">
           <Minus size={18} />
         </button>
         <button
@@ -359,7 +360,7 @@ export function Galaxy({
             engine.current?.replayIntro();
             if (store.get().settings.sfx) void cue("fly");
           }}
-          aria-label="回到全景"
+          aria-label="Показать всю карту"
         >
           <RotateCcw size={17} />
         </button>
@@ -374,15 +375,15 @@ export function Galaxy({
               if (store.get().settings.sfx) void cue("fly");
             }
           }}
-          aria-label="飞到一颗已点亮的星"
+          aria-label="Перейти к открытой звезде"
         >
           <Crosshair size={17} />
         </button>
-        <button className="icon-btn" onClick={() => canvas.current && shareGalaxy(canvas.current, lit, layout.n)} aria-label="分享我的星图">
+        <button className="icon-btn" onClick={() => canvas.current && shareGalaxy(canvas.current, lit, layout.n)} aria-label="Поделиться моей картой">
           <Share2 size={17} />
         </button>
       </div>
-      <p className="galaxy-hint">拖动旋转 · 滚动缩放 · 点击星星打开词条</p>
+      <p className="galaxy-hint">Перетаскивайте для вращения · Прокручивайте для масштаба · Нажмите на звезду, чтобы открыть слово</p>
     </div>
   );
 }

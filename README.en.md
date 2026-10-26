@@ -1,87 +1,34 @@
-<div align="center">
+# Word Atlas · Russian edition
 
-<img src="docs/assets/banner.jpg" alt="Word Atlas: 7,298 IELTS words, each with its own illustration" width="100%">
+[Русская документация](README.md)
 
-# Word Atlas 词光
+The Russian edition of [designfuchen/word-atlas](https://github.com/designfuchen/word-atlas): 7,298 English IELTS vocabulary entries, 14,596 examples with Russian translations, illustrations, UK/US audio and FSRS spaced repetition.
 
-**One word, one picture. Light up your IELTS vocabulary.**<br>
-7,298 core words · 14,596 original example sentences · 7,298 illustrations · UK & US audio · FSRS spaced repetition
+The interface, search, learning prompts, meanings, collocations and usage tips are in Russian. English definitions, examples and recordings are preserved. The original English–Chinese exports remain available separately.
 
-[**Open the app →**](https://0xlei.tech/words/) &nbsp;·&nbsp; [▶ Launch film](docs/assets/launch.mp4) &nbsp;·&nbsp; [Download the dataset](data/) &nbsp;·&nbsp; [**Follow on X →**](https://x.com/yangleiocx3) &nbsp;·&nbsp; [中文](README.md)
+<img src="docs/assets/today-desktop.jpg" alt="Russian Word Atlas interface" width="100%">
 
-<a href="docs/assets/launch.mp4"><img src="docs/assets/launch-preview.webp" alt="Word Atlas launch film highlights" width="100%"></a>
-
-<sub>▶ Click to watch the full 48-second launch film (with sound)</sub>
-
-</div>
-
----
-
-Word Atlas gives every word a picture, two sentences and a review rhythm that brings it back right before you forget. Every word you learn lights a star in your own word galaxy: 7,298 stars, one per word, rendered with custom WebGL2 shaders. It is free, needs no account, shows no ads and keeps your progress on your own device. The interface is in Chinese, built for Chinese-speaking IELTS learners; the dataset is useful to anyone.
-
-Every definition, sentence, illustration and recording was made new for this project, paid for by the author, and released for free.
-
-| | |
-|---:|---|
-| **7,298** | IELTS core entries, CEFR A1–C2, 19 topics |
-| **7,298** | original illustrations |
-| **14,596** | original example sentences with Chinese translations |
-| **22,905** | audio clips: UK and US pronunciation, narrated examples |
-| **0** | accounts, ads or trackers |
-
-<p align="center"><a href="docs/assets/demo.mp4"><b>▶ Watch the 30-second app demo</b></a></p>
-
-<img src="docs/assets/galaxy.jpg" alt="The word galaxy" width="100%">
-
-<img src="docs/assets/today-desktop.jpg" alt="Today" width="100%">
-
-## What every entry has
-
-- **An illustration** in one consistent vintage field-guide style, showing the scene of the first example.
-- **UK and US pronunciation**, plus a narrated everyday example (AI voices by ElevenLabs).
-- **Two original examples**: a short everyday sentence and an IELTS-register sentence on a common exam topic, both with natural Chinese translations.
-- **Up to three senses** in Chinese with short learner-friendly English definitions.
-- **Collocations, word family, synonyms and antonyms**, and one usage tip.
-- **CEFR level (A1–C2)** and one of **19 IELTS topics**.
-
-## How it helps you remember
-
-- **Active recall** with four question types: meaning, picture cloze, listening and spelling.
-- **FSRS 6** spaced repetition (the open algorithm used by modern Anki) with an adjustable retention target.
-- **Honest scoring**: only the first attempt counts; wrong words return in a different format within the session without inflating accuracy.
-- **Typing studio** for words, sentences and dictation, measured separately from memory.
-- **Share cards** for any word or for the day's session.
-
-## The dataset (CC BY 4.0)
-
-- [`data/word-atlas.json`](data/word-atlas.json) and [`data/word-atlas.csv`](data/word-atlas.csv)
-- `public/atlas/img/` (512 px WebP) and `public/atlas/thumb/` (256 px)
-- `public/atlas/audio/{uk,us,ex}/` MP3
-
-Field reference: [docs/dataset.md](docs/dataset.md). Use it for Anki decks, apps, browser extensions, evaluation sets or research. Please credit "Word Atlas contributors".
-
-## Run it
+## Run locally
 
 ```bash
 npm ci
-npm run dev        # http://localhost:5188
-npm test
-npm run check:atlas
-npm run build      # static site in dist/; ATLAS_BASE=/sub/path/ for sub-path hosting
+npm run dev
 ```
 
-## How the content was made
+Open `http://localhost:5188`. Run `npm test`, `npm run check:atlas` and `npm run build` to validate the application. `npm run build:atlas` rebuilds Russian exports from the stored translations without calling translation services.
 
-The headword list is a common IELTS reading core list (7,298 unique entries). All entry content is newly written for this project: definitions, examples, collocations and tips by a large language model under one lexicographic spec; illustrations by an image model in one art direction; audio by ElevenLabs. The pipeline lives in [`scripts/atlas/`](scripts/atlas) and is described in [docs/pipeline.md](docs/pipeline.md).
+## Data
 
-Everything passed automated structure and consistency checks, but it has **not** been proofread entry by entry. If you find a mistake, please open an issue or send a pull request against `data/`. This is not an official IELTS list and makes no score guarantees.
+- [Russian JSON](data/word-atlas.ru.json) and [CSV](data/word-atlas.ru.csv).
+- [Translation sources](data/ru/) and [schema](docs/dataset.md).
+- [Original English–Chinese data](data/word-atlas.json).
 
-## Follow along
+The original author describes the vocabulary list as common IELTS Reading vocabulary; its exact headword source is not identified. Source definitions, examples and illustrations were generated with AI, and the English recordings use ElevenLabs. Russian translations were authored by language models from the English and Chinese source material. Automated validation does not replace editorial review.
 
-New features, study methods and behind-the-scenes notes are posted first on X: [@yangleiocx3](https://x.com/yangleiocx3). If Word Atlas helps you, star the repo and say hi on X.
+Progress stays in the current browser and can be exported or restored under «Мой прогресс». Russian interface narration uses device speech synthesis; voice availability depends on the browser and operating system.
 
-[![Follow @yangleiocx3 on X](https://img.shields.io/badge/Follow-@yangleiocx3-111?style=for-the-badge&logo=x&logoColor=white)](https://x.com/yangleiocx3)
+## Licenses
 
-## License
+Code and technical documentation: [MIT](LICENSE). Dictionary text, translations, illustrations and English audio: [CC BY 4.0](CONTENT_LICENSE.md), with attribution and a notice of changes. This project is not affiliated with the IELTS organizers.
 
-Code: [MIT](LICENSE). Word content, illustrations and recordings: [CC BY 4.0](CONTENT_LICENSE.md), attribution "Word Atlas contributors".
+Upstream: [designfuchen/word-atlas](https://github.com/designfuchen/word-atlas). Russian fork: [ivkiwi/word-atlas](https://github.com/ivkiwi/word-atlas).

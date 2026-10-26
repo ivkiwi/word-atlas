@@ -1,8 +1,8 @@
 import type { Atlas, Entry } from "../atlas/types";
 import { toast } from "./Toast";
 
-const SERIF = '"Fraunces Variable", "Songti SC", "Noto Serif SC", Georgia, serif';
-const SANS = '-apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif';
+const SERIF = '"Fraunces Variable", Georgia, "Times New Roman", serif';
+const SANS = '-apple-system, "Segoe UI", Arial, sans-serif';
 
 function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -14,7 +14,7 @@ function loadImage(src: string) {
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
-  const tokens = /[一-鿿]/.test(text) ? Array.from(text) : text.split(/(\s+)/);
+  const tokens = text.split(/(\s+)/);
   const lines: string[] = [];
   let line = "";
   for (const t of tokens) {
@@ -53,29 +53,29 @@ export async function renderWordCard(atlas: Atlas, e: Entry) {
   const art = W - pad * 2;
   const src = atlas.img(e);
   ctx.save();
-  roundRect(ctx, pad, pad, art, art * 0.78, 36);
+  roundRect(ctx, pad, pad, art, art * 0.65, 36);
   ctx.clip();
   ctx.fillStyle = "#EAE1D0";
-  ctx.fillRect(pad, pad, art, art * 0.78);
+  ctx.fillRect(pad, pad, art, art * 0.65);
   if (src) {
     try {
       const img = await loadImage(src);
-      const crop = img.width * 0.78;
-      ctx.drawImage(img, 0, (img.height - crop) / 2, img.width, crop, pad, pad, art, art * 0.78);
+      const crop = img.width * 0.65;
+      ctx.drawImage(img, 0, (img.height - crop) / 2, img.width, crop, pad, pad, art, art * 0.65);
     } catch {
       /* keep the plain plate */
     }
   }
   ctx.restore();
 
-  let y = pad + art * 0.78 + 120;
+  let y = pad + art * 0.65 + 120;
   ctx.fillStyle = "#1E2640";
   ctx.font = `600 ${e.w.length > 12 ? 92 : 120}px ${SERIF}`;
   ctx.fillText(e.w, pad, y);
   y += 62;
   ctx.font = `400 34px ${SANS}`;
   ctx.fillStyle = "#6B6F80";
-  ctx.fillText([e.uk && `英 ${e.uk}`, e.us && e.us !== e.uk && `美 ${e.us}`].filter(Boolean).join("    "), pad, y);
+  ctx.fillText([e.uk && `Брит. ${e.uk}`, e.us && e.us !== e.uk && `Амер. ${e.us}`].filter(Boolean).join("    "), pad, y, art);
   y += 72;
   ctx.font = `600 40px ${SANS}`;
   ctx.fillStyle = "#1E2640";
@@ -86,8 +86,9 @@ export async function renderWordCard(atlas: Atlas, e: Entry) {
   const posW = ctx.measureText(s0.pos + "  ").width;
   ctx.fillStyle = "#1E2640";
   ctx.font = `600 40px ${SANS}`;
-  ctx.fillText(e.senses.slice(0, 2).map((s) => s.zh).join("；"), pad + posW, y);
-  y += 76;
+  const meanings = wrap(ctx, e.senses.slice(0, 2).map((s) => s.ru).join("; "), art - posW).slice(0, 2);
+  meanings.forEach((line, i) => ctx.fillText(line, pad + posW, y + i * 48, art - posW));
+  y += 68 + (meanings.length - 1) * 48;
   if (e.ex[0]) {
     ctx.font = `italic 400 36px ${SERIF}`;
     ctx.fillStyle = "#3C4560";
@@ -97,7 +98,7 @@ export async function renderWordCard(atlas: Atlas, e: Entry) {
     }
     ctx.font = `400 30px ${SANS}`;
     ctx.fillStyle = "#7A7C88";
-    for (const line of wrap(ctx, e.ex[0].zh, art).slice(0, 2)) {
+    for (const line of wrap(ctx, e.ex[0].ru, art).slice(0, 2)) {
       ctx.fillText(line, pad, y + 6);
       y += 44;
     }
@@ -106,10 +107,10 @@ export async function renderWordCard(atlas: Atlas, e: Entry) {
   ctx.fillRect(pad, H - 120, art, 2);
   ctx.fillStyle = "#1E2640";
   ctx.font = `600 34px ${SERIF}`;
-  ctx.fillText("词光 · Word Atlas", pad, H - 62);
+  ctx.fillText("Word Atlas · Атлас слов", pad, H - 62);
   ctx.font = `400 26px ${SANS}`;
   ctx.fillStyle = "#7A7C88";
-  const tag = "一词一画，点亮雅思";
+  const tag = "Слова в картинках. Подготовка к IELTS";
   ctx.fillText(tag, W - pad - ctx.measureText(tag).width, H - 64);
   return c;
 }
@@ -129,8 +130,8 @@ export async function shareWord(atlas: Atlas, e: Entry) {
     a.download = file.name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast("分享卡片已保存", "ok");
+    toast("Карточка сохранена", "ok");
   } catch {
-    toast("卡片生成失败，请稍后再试", "warn");
+    toast("Не удалось создать карточку. Попробуйте ещё раз", "warn");
   }
 }

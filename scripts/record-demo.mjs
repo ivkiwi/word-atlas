@@ -27,7 +27,7 @@ const seeded = index.words.filter((w, i) => w[4] <= 2 && i % 3 === 0).slice(0, 6
 await ctx.addInitScript((ids) => {
   if (!sessionStorage.getItem("demo")) {
     localStorage.clear();
-    localStorage.setItem("word-atlas:settings", JSON.stringify({ onboarded: true, startLevel: 2, dailyNew: 10, autoplay: false, splash: true }));
+    localStorage.setItem("word-atlas:settings", JSON.stringify({ onboarded: true, startLevel: 2, dailyNew: 10, autoplay: false, splash: true, theme: "light", sfx: false }));
     const now = Date.now();
     const cards = Object.fromEntries(
       ids.map((id, i) => [id, { due: now + (1 + (i % 9)) * 86400000, s: i % 3 ? 8 : 40, d: 5, el: 3, sd: 6, ls: 0, reps: 4, lapses: 0, st: 2, seen: i < 18 ? now - 3600000 : now - (10 + (i % 20)) * 86400000 }]),
@@ -70,7 +70,7 @@ await glide(0, 40);
 await wait(500);
 
 // One learning step: meet a word, then recall it.
-await page.getByRole("button", { name: /开始今天的旅程|继续旅程/ }).click();
+await page.getByRole("button", { name: /Начать занятие|Продолжить занятие/ }).click();
 await wait(2600);
 await page.keyboard.press("Enter");
 await wait(1800);

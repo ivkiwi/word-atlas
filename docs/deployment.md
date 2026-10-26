@@ -1,14 +1,23 @@
-# 部署 / Deployment
+# Развёртывание
 
-`npm run build` 生成纯静态站点 `dist/`，可以放到任何静态托管（Nginx、Cloudflare Pages、Vercel、GitHub Pages）。
+`npm run build` создаёт статический сайт в `dist/`. Сервер приложений и база данных не нужны.
 
-## 子路径
+После изменения переводов:
+
+```bash
+npm run build:atlas
+npm run check:atlas
+npm test
+npm run build
+```
+
+## Подкаталог
 
 ```bash
 ATLAS_BASE=/words/ npm run build
 ```
 
-## Nginx 示例
+Размещайте весь `dist/`, включая `atlas/`, `sfx/`, `brand/`, `sw.js`, под одним базовым URL. Навигация использует хеш URL.
 
 ```nginx
 location ^~ /words/ {
@@ -18,10 +27,10 @@ location ^~ /words/ {
 }
 ```
 
-## GitHub Pages
+## Кеш и голос
 
-仓库带有 `.github/workflows/pages.yml`。在仓库 Settings → Pages 选择 “GitHub Actions”，然后手动运行 “Deploy to GitHub Pages”。
+В производственной сборке включается service worker. Страница и индекс загружаются сначала из сети, остальные просмотренные материалы кешируются. Русская версия имеет отдельную версию кеша и метку в JSON-запросах; прогресс `localStorage` сохраняется.
 
-## 体积
+PWA требует HTTPS или локального адреса. Русские реплики используют голос устройства; доступность голоса и работа без сети зависят от системы. Английские записи не требуют системного голоса.
 
-插画与音频合计约数百 MB。建议在 CDN 后部署，或按需只发布 `thumb/` 和部分音频。
+Изображения и аудио занимают сотни мегабайт. Проверка `npm run check:atlas` выявляет отсутствие файлов, указанных в битах `media`.

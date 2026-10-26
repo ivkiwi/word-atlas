@@ -1,5 +1,5 @@
 /* Word Atlas offline cache: app shell network-first, everything else cache-first. */
-const VERSION = "atlas-v1";
+const VERSION = "atlas-ru-v2";
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 
@@ -29,7 +29,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) caches.open(SHELL).then((c) => c.put(req, res.clone()));
+          if (res.ok) {
+            const copy = res.clone();
+            event.waitUntil(caches.open(SHELL).then((c) => c.put(req, copy)));
+          }
           return res;
         })
         .catch(() => caches.match(req).then((hit) => hit || caches.match(new URL("./", self.registration.scope).href))),
@@ -44,7 +47,7 @@ self.addEventListener("fetch", (event) => {
           if (res.ok && res.type === "basic") {
             const copy = res.clone();
             const name = /\/atlas\/(img|thumb|audio)\//.test(url.pathname) ? MEDIA : SHELL;
-            caches.open(name).then((c) => c.put(req, copy)).then(() => name === MEDIA && trim(MEDIA, 1500));
+            event.waitUntil(caches.open(name).then((c) => c.put(req, copy)).then(() => name === MEDIA && trim(MEDIA, 1500)));
           }
           return res;
         }),

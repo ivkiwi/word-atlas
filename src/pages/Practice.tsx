@@ -4,7 +4,7 @@ import { prefetch, useAtlas } from "../atlas/context";
 import type { Entry } from "../atlas/types";
 import { play, stopAudio } from "../lib/audio";
 import { cue } from "../lib/sound";
-import { hashSeed, shuffle } from "../lib/text";
+import { hashSeed, shuffle, plural } from "../lib/text";
 import { clean, correctCharacterCount, same, typingDelta, typingMetrics } from "../lib/typing";
 import { store, useStore } from "../store/store";
 import { AmbiencePicker } from "../ui/Ambience";
@@ -14,15 +14,15 @@ type Mode = "word" | "sentence" | "dictation";
 type Source = "recent" | "mistakes" | "saved" | "path";
 
 const MODES: [Mode, string, string, typeof Type][] = [
-  ["word", "单词", "看图写出单词", Type],
-  ["sentence", "例句", "照着抄写，练出手感", Keyboard],
-  ["dictation", "听写", "只听声音，写下整句", Headphones],
+  ["word", "Слова", "Напишите слово по картинке", Type],
+  ["sentence", "Примеры", "Перепечатайте предложение для практики", Keyboard],
+  ["dictation", "Диктант", "Прослушайте и напишите всё предложение", Headphones],
 ];
 const SOURCES: [Source, string][] = [
-  ["recent", "最近学过"],
-  ["mistakes", "错词本"],
-  ["saved", "收藏"],
-  ["path", "学习路线"],
+  ["recent", "Недавно изученные"],
+  ["mistakes", "Слова с ошибками"],
+  ["saved", "Избранное"],
+  ["path", "Путь изучения"],
 ];
 
 export function Practice() {
@@ -32,6 +32,8 @@ export function Practice() {
   const [mode, setMode] = useState<Mode>("word");
   const [source, setSource] = useState<Source>(() => (Object.keys(progress.cards).length ? "recent" : "path"));
   const [round, setRound] = useState<{ entries: Entry[]; key: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const pool = useMemo(() => {
     const learned = Object.entries(progress.cards)
@@ -43,9 +45,19 @@ export function Practice() {
   }, [atlas, progress.cards, progress.mistakes, progress.bookmarks, source, startLevel]);
 
   const start = async () => {
+    setRound(null);
+    setLoading(true);
+    setError(null);
     const ids = shuffle(pool.slice(0, 60), hashSeed(String(Date.now()))).slice(0, 10);
-    const entries = (await prefetch(atlas, ids)).filter((e): e is Entry => !!e && (mode === "word" || e.ex.length > 0));
+    const loaded = await prefetch(atlas, ids);
+    setLoading(false);
+    if (loaded.some((e) => !e)) {
+      setError("Не удалось загрузить слова. Проверьте подключение к сети и повторите попытку.");
+      return;
+    }
+    const entries = loaded.filter((e): e is Entry => !!e && (mode === "word" || e.ex.length > 0));
     if (entries.length) setRound({ entries, key: Date.now() });
+    else setError("В выбранном наборе нет примеров для этого режима. Выберите другой источник или режим.");
   };
 
   if (round) return <TypingRound key={round.key} mode={mode} entries={round.entries} onExit={() => setRound(null)} onAgain={start} />;
@@ -54,13 +66,13 @@ export function Practice() {
   return (
     <div className="page practice">
       <header className="page-head">
-        <p className="eyebrow">练习 · Typing Studio</p>
-        <h1 className="display">让手，也记住它们。</h1>
-        <p className="lede">打字只练拼写和手感，不会改动记忆进度。</p>
+        <p className="eyebrow">Мастерская печати</p>
+        <h1 className="display">Пусть пальцы тоже запоминают.</h1>
+        <p className="lede">Практика печати тренирует написание и не меняет прогресс запоминания.</p>
       </header>
       <div className="practice-grid">
         <section className="panel">
-          <h3 className="eyebrow">模式</h3>
+          <h3 className="eyebrow">Режим</h3>
           <div className="mode-cards">
             {MODES.map(([k, name, desc, Icon]) => (
               <button key={k} className={`mode-card ${mode === k ? "is-on" : ""}`} onClick={() => setMode(k)} aria-pressed={mode === k}>
@@ -70,7 +82,7 @@ export function Practice() {
               </button>
             ))}
           </div>
-          <h3 className="eyebrow">词来自</h3>
+          <h3 className="eyebrow">Источник слов</h3>
           <div className="segmented segmented-wide">
             {SOURCES.map(([k, label]) => (
               <button key={k} className={source === k ? "is-on" : ""} onClick={() => setSource(k)} aria-pressed={source === k}>
@@ -81,30 +93,31 @@ export function Practice() {
           <p className="muted">
             {pool.length
               ? source === "path"
-                ? "从学习路线的前 400 个词里随机抽 10 个。"
-                : `可练 ${pool.length} 个词，每轮随机 10 个。`
-              : "这里还没有词，先去学几个，或换个来源。"}
+                ? "10 случайных слов из первых 400 слов вашего пути изучения."
+                : `Доступно ${plural(pool.length, "слово", "слова", "слов")}. В каждой тренировке — 10 случайных.`
+              : "Здесь пока нет слов. Изучите несколько или выберите другой источник."}
           </p>
-          <button className="btn btn-primary btn-xl" onClick={start} disabled={!pool.length}>
-            开始一轮
+          {error && <p role="alert">{error}</p>}
+          <button className="btn btn-primary btn-xl" onClick={start} disabled={!pool.length || loading}>
+            {loading ? "Загрузка…" : "Начать тренировку"}
           </button>
         </section>
         <section className="panel practice-side">
           <img src={`${import.meta.env.BASE_URL}brand/${mode === "dictation" ? "listen" : "typing"}.webp`} alt="" />
           <dl className="mini-stats">
             <div>
-              <dt>最佳速度</dt>
+              <dt>Лучшая скорость</dt>
               <dd>
                 {best}
                 <small>WPM</small>
               </dd>
             </div>
             <div>
-              <dt>完成轮次</dt>
+              <dt>Тренировок завершено</dt>
               <dd>{progress.typing.length}</dd>
             </div>
           </dl>
-          <p className="muted">WPM 按标准每 5 个字符计 1 词，只统计正确输入。</p>
+          <p className="muted">Скорость — в словах в минуту: 5 символов считаются одним словом. Учитываются только верно введённые символы.</p>
         </section>
       </div>
     </div>
@@ -169,17 +182,17 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
     return (
       <div className="page practice">
         <section className="panel typing-done">
-          <p className="eyebrow">本轮完成</p>
+          <p className="eyebrow">Тренировка завершена</p>
           <h1 className="display">
             {m.wpm} <small>WPM</small>
           </h1>
-          <p className="lede">准确率 {m.accuracy}% · {entries.length} 项</p>
+          <p className="lede">Точность {m.accuracy}% · {plural(entries.length, "задание", "задания", "заданий")}</p>
           <div className="summary-actions">
             <button className="btn btn-ghost" onClick={onExit}>
-              返回
+              Назад
             </button>
             <button className="btn btn-primary btn-xl" onClick={onAgain} autoFocus>
-              <RotateCcw size={18} /> 再来一轮
+              <RotateCcw size={18} /> Ещё одна тренировка
             </button>
           </div>
         </section>
@@ -190,7 +203,7 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
     <div className="page practice typing">
       <header className="typing-top">
         <button className="btn btn-ghost" onClick={onExit}>
-          结束
+          Завершить
         </button>
         <AmbiencePicker />
         <div className="learn-progress">
@@ -205,18 +218,18 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
           <div className="typing-cue">
             <Illustration src={atlas.img(e)} word={e.w} topic={0} eager />
             <p>
-              <span className="pos">{e.senses[0].pos}</span> {e.senses[0].zh}
+              <span className="pos">{e.senses[0].pos}</span> {e.senses[0].ru}
             </p>
           </div>
         )}
         {mode !== "word" && (
-          <p className="typing-zh">
+          <p className="typing-ru">
             {mode === "dictation" && (
               <button className="link" onClick={() => play(atlas.audio(e, "ex"), e.ex[0].en, settings.accent)}>
-                再听一遍
+                Послушать ещё раз
               </button>
             )}
-            {e.ex[0].zh}
+            {e.ex[0].ru}
           </p>
         )}
         <p className={`typing-text ${mode === "word" ? "is-word" : ""} ${mode === "dictation" ? "is-hidden" : ""}`} lang="en" aria-hidden="true">
@@ -241,10 +254,10 @@ function TypingRound({ mode, entries, onExit, onAgain }: { mode: Mode; entries: 
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
-          aria-label="在这里输入"
+          aria-label="Введите ответ здесь"
         />
         <p className="muted typing-help">
-          {mode === "dictation" ? "听不清可以点「再听一遍」。" : "直接开始输入，全部正确后自动进入下一项。"} 第 {i + 1}/{entries.length} 项
+          {mode === "dictation" ? "Если не расслышали, нажмите «Послушать ещё раз»." : "Начните печатать. После верного ответа откроется следующее задание."} Задание {i + 1} из {entries.length}
         </p>
       </section>
     </div>

@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react";
 import { prefetch, useAtlas, useEntry } from "../atlas/context";
 import { go, openWord } from "../lib/router";
 import { cue } from "../lib/sound";
-import { hashSeed } from "../lib/text";
+import { hashSeed, plural } from "../lib/text";
 import { buildSession, masteredCount, todayPlan } from "../store/session";
 import { isMastered } from "../store/srs";
 import { dayKey, store, useStore } from "../store/store";
@@ -15,11 +15,11 @@ import { Ring } from "../ui/Ring";
 const BRAND = `${import.meta.env.BASE_URL}brand`;
 
 function greeting(h: number) {
-  if (h < 5) return "夜深了";
-  if (h < 11) return "早上好";
-  if (h < 14) return "中午好";
-  if (h < 18) return "下午好";
-  return "晚上好";
+  if (h < 5) return "Доброй ночи";
+  if (h < 11) return "Доброе утро";
+  if (h < 14) return "Добрый день";
+  if (h < 18) return "Добрый день";
+  return "Добрый вечер";
 }
 
 export function streakOf(days: Record<string, { r: number }>) {
@@ -67,7 +67,7 @@ export function Today() {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const k = dayKey(d);
-    return { k, label: "日一二三四五六"[d.getDay()], v: progress.days[k]?.r ?? 0, today: i === 6 };
+    return { k, label: d.toLocaleDateString("ru-RU", { weekday: "short" }), v: progress.days[k]?.r ?? 0, today: i === 6 };
   });
 
   const learned = Object.keys(progress.cards).length;
@@ -78,9 +78,9 @@ export function Today() {
     <div className="page today">
       <header className="greet">
         <p className="eyebrow">
-          {now.getMonth() + 1}月{now.getDate()}日 · 星期{"日一二三四五六"[now.getDay()]}
+          {now.toLocaleDateString("ru-RU", { day: "numeric", month: "long", weekday: "long" })}
         </p>
-        <h1 className="display">{greeting(now.getHours())}，探索者。</h1>
+        <h1 className="display">{greeting(now.getHours())}, исследователь!</h1>
       </header>
 
       <section className={`journey ${total === 0 && !active ? "is-clear" : ""}`}>
@@ -88,63 +88,63 @@ export function Today() {
         <div className="journey-body">
           {active ? (
             <>
-              <p className="eyebrow eyebrow-light">旅程进行中</p>
+              <p className="eyebrow eyebrow-light">Занятие продолжается</p>
               <h2>
-                还剩 <b>{active.steps.length - active.index}</b> 步
+                Осталось шагов: <b>{active.steps.length - active.index}</b>
               </h2>
-              <p className="journey-lede">进度已保存，随时接着走。</p>
+              <p className="journey-lede">Прогресс сохранён. Продолжайте, когда удобно.</p>
             </>
           ) : total > 0 ? (
             <>
-              <p className="eyebrow eyebrow-light">今日旅程</p>
+              <p className="eyebrow eyebrow-light">План на сегодня</p>
               <h2>
                 {plan.due.length > 0 && (
                   <>
-                    复习 <b>{plan.due.length}</b>
+                    Повторим <b>{plural(plan.due.length, "слово", "слова", "слов")}</b>
                   </>
                 )}
                 {plan.due.length > 0 && plan.fresh.length > 0 && <i> · </i>}
                 {plan.fresh.length > 0 && (
                   <>
-                    新词 <b>{plan.fresh.length}</b>
+                    Изучим <b>{plural(plan.fresh.length, "новое слово", "новых слова", "новых слов")}</b>
                   </>
                 )}
               </h2>
-              <p className="journey-lede">约 {plan.minutes} 分钟。先温故，再知新。</p>
+              <p className="journey-lede">Около {plural(plan.minutes, "минуты", "минут", "минут")}. Сначала повторим знакомое, затем изучим новое.</p>
             </>
           ) : (
             <>
-              <p className="eyebrow eyebrow-light">今日已完成</p>
-              <h2>今天的星，都亮了。</h2>
-              <p className="journey-lede">记忆需要一点留白。想多走一段，也可以。</p>
+              <p className="eyebrow eyebrow-light">На сегодня всё</p>
+              <h2>Все звёзды на сегодня зажглись.</h2>
+              <p className="journey-lede">Памяти полезен отдых. Но можно открыть ещё несколько слов.</p>
             </>
           )}
           {teaser.length > 0 && (
-            <div className="teaser" aria-label="今天将遇见的新词">
+            <div className="teaser" aria-label="Новые слова на сегодня">
               {teaser.map((w, i) => (
                 <Illustration key={w.id} src={atlas.img(w, "thumb")} word={w.word} topic={w.topic} className={`teaser-${i}`} />
               ))}
-              <span>今天会遇见它们</span>
+              <span>Сегодня познакомимся с ними</span>
             </div>
           )}
           <div className="journey-actions">
             {active || total > 0 ? (
               <button className="btn btn-primary btn-xl" onClick={() => start()}>
-                {active ? "继续旅程" : "开始今天的旅程"} <ArrowRight size={20} />
+                {active ? "Продолжить занятие" : "Начать занятие"} <ArrowRight size={20} />
               </button>
             ) : (
               <button className="btn btn-primary btn-xl" onClick={() => start({ extra: 5 })}>
-                再认识 5 个新词 <Sparkles size={18} />
+                Ещё 5 новых слов <Sparkles size={18} />
               </button>
             )}
             {!active && plan.due.length > 0 && plan.fresh.length > 0 && (
               <button className="btn btn-glass" onClick={() => start({ reviewOnly: true })}>
-                只复习
+                Только повторение
               </button>
             )}
             {!active && total === 0 && (
               <button className="btn btn-glass" onClick={() => go({ page: "practice" })}>
-                <Keyboard size={18} /> 打字练习
+                <Keyboard size={18} /> Практика печати
               </button>
             )}
           </div>
@@ -156,19 +156,19 @@ export function Today() {
 
         <section className="panel streak-panel">
           <div className="panel-head">
-            <h3 className="eyebrow">这一周</h3>
+            <h3 className="eyebrow">На этой неделе</h3>
             <span className={`streak ${streak ? "is-on" : ""}`}>
-              <Flame size={16} /> 连续 {streak} 天
+              <Flame size={16} /> {plural(streak, "день", "дня", "дней")} подряд
             </span>
           </div>
           <div className="streak-body">
             <Ring value={goal ? doneToday / goal : 0} size={112} stroke={8} tone="terra">
               <b>{doneToday}</b>
-              <small>今日答题</small>
+              <small>Ответов сегодня</small>
             </Ring>
             <ol className="week">
               {week.map((d) => (
-                <li key={d.k} className={`${d.v ? "is-on" : ""} ${d.today ? "is-today" : ""}`} title={`${d.k}：${d.v} 题`}>
+                <li key={d.k} className={`${d.v ? "is-on" : ""} ${d.today ? "is-today" : ""}`} title={`${d.k}: ${plural(d.v, "ответ", "ответа", "ответов")}`}>
                   <span style={{ "--h": Math.min(1, d.v / 40) } as React.CSSProperties} />
                   <small>{d.label}</small>
                 </li>
@@ -177,16 +177,16 @@ export function Today() {
           </div>
           <dl className="mini-stats">
             <div>
-              <dt>已点亮</dt>
-              <dd>{learned.toLocaleString()}</dd>
+              <dt>Открыто</dt>
+              <dd>{learned.toLocaleString("ru-RU")}</dd>
             </div>
             <div>
-              <dt>已掌握</dt>
-              <dd>{mastered.toLocaleString()}</dd>
+              <dt>Освоено</dt>
+              <dd>{mastered.toLocaleString("ru-RU")}</dd>
             </div>
             <div>
-              <dt>全部词汇</dt>
-              <dd>{atlas.count.toLocaleString()}</dd>
+              <dt>Всего слов</dt>
+              <dd>{atlas.count.toLocaleString("ru-RU")}</dd>
             </div>
           </dl>
         </section>
@@ -214,13 +214,13 @@ function GalaxyPanel({ learned, total }: { learned: number; total: number }) {
     <section className="galaxy-panel" onClick={() => go({ page: "atlas", view: "galaxy" })} role="link" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && go({ page: "atlas", view: "galaxy" })}>
       <Galaxy mode="mini" highlight={todayIds} />
       <div className="galaxy-panel-copy">
-        <p className="eyebrow eyebrow-light">你的词汇星图</p>
+        <p className="eyebrow eyebrow-light">Ваша звёздная карта слов</p>
         <h3>
-          已点亮 <b>{learned.toLocaleString()}</b> 颗星
+          Открыто звёзд: <b>{learned.toLocaleString("ru-RU")}</b>
         </h3>
-        <p>{learned ? `还有 ${(total - learned).toLocaleString()} 颗在等你。金色是今天新点亮的。` : `${total.toLocaleString()} 个词是 ${total.toLocaleString()} 颗星。学会一个，就点亮一颗。`}</p>
+        <p>{learned ? `На очереди — ещё ${plural(total - learned, "звезда", "звезды", "звёзд")}. Золотым отмечены открытые сегодня.` : `${plural(total, "слово", "слова", "слов")} — целая вселенная. Изучите слово, чтобы зажечь звезду.`}</p>
         <span className="btn btn-glass">
-          进入星图 <ArrowRight size={18} />
+          Открыть карту <ArrowRight size={18} />
         </span>
       </div>
     </section>
@@ -237,10 +237,10 @@ function WordOfDay() {
   const { entry } = useEntry(pick?.id);
   if (!pick) return null;
   return (
-    <section className="panel wotd" onClick={() => openWord(pick.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && openWord(pick.id)} aria-label={`今日一词：${pick.word}`}>
+    <section className="panel wotd" onClick={() => openWord(pick.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && openWord(pick.id)} aria-label={`Слово дня：${pick.word}`}>
       <Illustration src={atlas.img(pick)} word={pick.word} topic={pick.topic} className="wotd-art" />
       <div className="wotd-body">
-        <h3 className="eyebrow">今日一词</h3>
+        <h3 className="eyebrow">Слово дня</h3>
         <p className="wotd-word" lang="en">
           {pick.word}
         </p>
@@ -249,7 +249,7 @@ function WordOfDay() {
             <Pronounce entry={entry} refw={pick} />
           </div>
         )}
-        <p className="wotd-zh">{pick.zh}</p>
+        <p className="wotd-ru">{pick.ru}</p>
         {entry?.ex[0] && (
           <p className="wotd-ex" lang="en">
             <Highlight text={entry.ex[0].en} word={entry.w} />
@@ -277,13 +277,13 @@ function LevelPath() {
     }
     return out;
   }, [atlas, cards]);
-  const NAMES = ["入门", "基础", "进阶", "中高", "高级", "精通"];
+  const NAMES = ["Начальный", "Базовый", "Средний", "Выше среднего", "Продвинутый", "Свободное владение"];
   return (
     <section className="panel path-panel">
       <div className="panel-head">
-        <h3 className="eyebrow">学习路线 · 从 A1 到 C2</h3>
+        <h3 className="eyebrow">Путь изучения: от A1 до C2</h3>
         <span className="legend">
-          <i className="lg-seen" /> 已学 <i className="lg-done" /> 已掌握
+          <i className="lg-seen" /> Изучено <i className="lg-done" /> Освоено
         </span>
       </div>
       <ol className="route">
@@ -292,7 +292,7 @@ function LevelPath() {
           const done = l.mastered / Math.max(1, l.total);
           return (
             <li key={l.name} className={`${i === start ? "is-start" : ""} ${l.seen ? "is-on" : ""}`}>
-              <button onClick={() => go({ page: "atlas", level: l.name })} aria-label={`${l.name} ${NAMES[i]}，已学 ${l.seen} / ${l.total}`}>
+              <button onClick={() => go({ page: "atlas", level: l.name })} aria-label={`${l.name}: ${NAMES[i]}, изучено ${l.seen} из ${l.total}`}>
                 <span className="station" style={{ "--seen": seen, "--done": done } as React.CSSProperties}>
                   <b>{l.name}</b>
                 </span>
@@ -301,7 +301,7 @@ function LevelPath() {
                   {l.seen}
                   <small>/{l.total}</small>
                 </span>
-                {i === start && <span className="station-flag">起点</span>}
+                {i === start && <span className="station-flag">Старт</span>}
               </button>
             </li>
           );
@@ -321,9 +321,9 @@ function Topics() {
   return (
     <section className="topics-panel">
       <div className="panel-head">
-        <h3 className="eyebrow">按雅思话题探索</h3>
+        <h3 className="eyebrow">Темы IELTS</h3>
         <button className="link" onClick={() => go({ page: "atlas" })}>
-          打开图鉴
+          Открыть атлас
         </button>
       </div>
       <ul className="topic-tiles">
@@ -333,7 +333,7 @@ function Topics() {
               <img src={`${BRAND}/topic-${key}.webp`} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
               <span>
                 <b>{name}</b>
-                <small>{counts[i]} 个词</small>
+                <small>{plural(counts[i], "слово", "слова", "слов")}</small>
               </span>
             </button>
           </li>

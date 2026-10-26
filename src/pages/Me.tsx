@@ -42,74 +42,74 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
   const restore = async (f: File) => {
-    if (f.size > 30 * 1024 * 1024) return toast("文件太大，不像是学习备份。", "warn");
+    if (f.size > 30 * 1024 * 1024) return toast("Файл слишком большой для резервной копии. Допустимо до 30 МБ.", "warn");
     const r = importBackup(await f.text());
-    toast(r.ok ? `已恢复 ${r.cards} 个词的记忆` : r.error, r.ok ? "ok" : "warn");
+    toast(r.ok ? `Прогресс восстановлен. Слов: ${r.cards.toLocaleString("ru-RU")}` : r.error, r.ok ? "ok" : "warn");
   };
   const maxF = Math.max(1, ...stats.forecast);
 
   return (
     <div className="page me">
       <header className="page-head">
-        <p className="eyebrow">我的</p>
-        <h1 className="display">你的星空</h1>
+        <p className="eyebrow">Мой прогресс</p>
+        <h1 className="display">Ваша вселенная слов</h1>
       </header>
 
       <section className="stat-strip">
         <div>
-          <dt>连续学习</dt>
+          <dt>Дней подряд</dt>
           <dd>
             {streakOf(progress.days)}
-            <small>天</small>
+            <small>дн.</small>
           </dd>
         </div>
         <div>
-          <dt>已点亮</dt>
-          <dd>{stats.learned.toLocaleString()}</dd>
+          <dt>Открыто</dt>
+          <dd>{stats.learned.toLocaleString("ru-RU")}</dd>
         </div>
         <div>
-          <dt>长期记住</dt>
-          <dd>{stats.mastered.toLocaleString()}</dd>
+          <dt>В долговременной памяти</dt>
+          <dd>{stats.mastered.toLocaleString("ru-RU")}</dd>
         </div>
         <div>
-          <dt>首次正确率</dt>
+          <dt>Точность первого ответа</dt>
           <dd>
             {stats.accuracy}
             <small>%</small>
           </dd>
         </div>
         <div>
-          <dt>学习时长</dt>
+          <dt>Время занятий</dt>
           <dd>
             {stats.minutes}
-            <small>分钟</small>
+            <small>мин</small>
           </dd>
         </div>
       </section>
 
       <div className="me-grid">
         <section className="panel">
-          <h3 className="eyebrow">过去 20 周</h3>
+          <h3 className="eyebrow">Последние 20 недель</h3>
           <Heatmap days={progress.days} />
-          <p className="muted">一格是一天，颜色越深，那天答得越多。「长期记住」指记忆稳定度超过 21 天。</p>
+          <p className="muted">Каждая клетка — один день. Чем темнее цвет, тем больше ответов. В долговременной памяти — слова со стабильностью запоминания не менее 21 дня.</p>
         </section>
 
         <section className="panel">
-          <h3 className="eyebrow">未来 7 天的复习量</h3>
+          <h3 className="eyebrow">Повторения на ближайшие 7 дней</h3>
           <ol className="forecast">
             {stats.forecast.map((n, i) => (
               <li key={i}>
                 <span style={{ height: `${(n / maxF) * 100}%` }} />
                 <b>{n}</b>
-                <small>{i === 0 ? "今天" : i === 1 ? "明天" : `+${i}`}</small>
+                <small>{i === 0 ? "Сегодня" : i === 1 ? "Завтра" : `+${i}`}</small>
               </li>
             ))}
           </ol>
         </section>
 
         <section className="panel settings">
-          <h3 className="eyebrow">学习设置</h3>
-          <Field label="每日新词" hint="复习不设上限，算法只安排快要遗忘的词。">
+          <h3 className="eyebrow">Настройки обучения</h3>
+          <Field label="Новых слов в день" hint="Повторения без лимита: алгоритм выбирает слова, которые начинают забываться.">
             <div className="segmented">
               {[5, 10, 15, 20, 30].map((n) => (
                 <button key={n} className={settings.dailyNew === n ? "is-on" : ""} onClick={() => set({ dailyNew: n })}>
@@ -118,7 +118,7 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
               ))}
             </div>
           </Field>
-          <Field label="从哪个难度开始" hint="跳过已经熟悉的低级别词。">
+          <Field label="Начальный уровень" hint="Пропустить простые слова, которые уже знакомы.">
             <div className="segmented">
               {atlas.cefr.map((l, i) => (
                 <button key={l} className={settings.startLevel === i ? "is-on" : ""} onClick={() => set({ startLevel: i })}>
@@ -127,7 +127,7 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
               ))}
             </div>
           </Field>
-          <Field label="目标记忆率" hint="越高复习越频繁。90% 是大多数人的甜点。">
+          <Field label="Целевой уровень запоминания" hint="Чем выше значение, тем чаще повторения. Обычно удобно начать с 90%.">
             <div className="segmented">
               {[0.85, 0.9, 0.95].map((n) => (
                 <button key={n} className={settings.retention === n ? "is-on" : ""} onClick={() => set({ retention: n })}>
@@ -136,23 +136,23 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
               ))}
             </div>
           </Field>
-          <Field label="发音">
+          <Field label="Произношение">
             <div className="segmented">
               <button className={settings.accent === "uk" ? "is-on" : ""} onClick={() => set({ accent: "uk" })}>
-                英式
+                Британское
               </button>
               <button className={settings.accent === "us" ? "is-on" : ""} onClick={() => set({ accent: "us" })}>
-                美式
+                Американское
               </button>
             </div>
           </Field>
-          <Field label="外观">
+          <Field label="Тема оформления">
             <div className="segmented">
               {(
                 [
-                  ["system", "跟随系统"],
-                  ["light", "浅色"],
-                  ["dark", "深色"],
+                  ["system", "Системная"],
+                  ["light", "Светлая"],
+                  ["dark", "Тёмная"],
                 ] as const
               ).map(([k, l]) => (
                 <button key={k} className={settings.theme === k ? "is-on" : ""} onClick={() => set({ theme: k })}>
@@ -161,18 +161,18 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
               ))}
             </div>
           </Field>
-          <Toggle label="自动播放发音" on={settings.autoplay} set={(v) => set({ autoplay: v })} />
-          <Toggle label="界面音效" on={settings.sfx} set={(v) => set({ sfx: v })} />
-          <Toggle label="开屏动画（每天一次）" on={settings.splash} set={(v) => set({ splash: v })} />
-          <Toggle label="复习时加入拼写题" on={settings.spell} set={(v) => set({ spell: v })} />
+          <Toggle label="Автоматически произносить слова" on={settings.autoplay} set={(v) => set({ autoplay: v })} />
+          <Toggle label="Звуки интерфейса" on={settings.sfx} set={(v) => set({ sfx: v })} />
+          <Toggle label="Заставка при входе (раз в день)" on={settings.splash} set={(v) => set({ splash: v })} />
+          <Toggle label="Задания на написание при повторении" on={settings.spell} set={(v) => set({ spell: v })} />
           {privateAvailable && (
-            <Field label="词库" hint="私人词库只在本机开发服务器中可用，不会被打包发布。">
+            <Field label="Словарь" hint="Личный словарь доступен только на локальном сервере разработки и не входит в сборку.">
               <div className="segmented">
                 <button className={settings.dataset === "open" ? "is-on" : ""} onClick={() => set({ dataset: "open" })}>
-                  开放图鉴
+                  Открытый атлас
                 </button>
                 <button className={settings.dataset === "private" ? "is-on" : ""} onClick={() => set({ dataset: "private" })}>
-                  私人 8000
+                  Личный словарь 8000
                 </button>
               </div>
             </Field>
@@ -180,27 +180,27 @@ export function Me({ privateAvailable }: { privateAvailable: boolean }) {
         </section>
 
         <section className="panel">
-          <h3 className="eyebrow">数据</h3>
-          <p className="muted">进度只存在这台设备的浏览器里：没有账号，没有服务器。换设备时，导出备份再导入即可。</p>
-          {saveError && <p className="warn-text">浏览器拒绝保存（可能是隐私模式或空间已满）。请尽快导出备份。</p>}
+          <h3 className="eyebrow">Данные</h3>
+          <p className="muted">Прогресс хранится только в браузере этого устройства. Чтобы перенести его, экспортируйте резервную копию и импортируйте на другом устройстве.</p>
+          {saveError && <p className="warn-text">Браузер не может сохранить прогресс: возможно, включён приватный режим или заполнено хранилище. Экспортируйте резервную копию.</p>}
           <div className="data-actions">
             <button className="btn btn-ghost" onClick={download}>
-              <Download size={18} /> 导出备份
+              <Download size={18} /> Экспортировать копию
             </button>
             <button className="btn btn-ghost" onClick={() => file.current?.click()}>
-              <Upload size={18} /> 导入备份
+              <Upload size={18} /> Импортировать копию
             </button>
             <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && restore(e.target.files[0]).finally(() => (e.target.value = ""))} />
             <button
               className="btn btn-ghost btn-danger"
               onClick={() => {
-                if (confirm("确定清空这个词库的全部学习记录？此操作无法撤销，建议先导出备份。")) {
+                if (confirm("Удалить весь прогресс этого словаря? Это действие нельзя отменить. Сначала рекомендуем экспортировать резервную копию.")) {
                   resetProgress();
-                  toast("学习记录已清空");
+                  toast("Прогресс удалён");
                 }
               }}
             >
-              <RotateCcw size={18} /> 清空记录
+              <RotateCcw size={18} /> Сбросить прогресс
             </button>
           </div>
         </section>
@@ -245,9 +245,9 @@ function Heatmap({ days }: { days: Record<string, { r: number }> }) {
   }
   const lvl = (v: number) => (v === 0 ? 0 : v < 10 ? 1 : v < 25 ? 2 : v < 50 ? 3 : 4);
   return (
-    <div className="heatmap" role="img" aria-label="学习热力图">
+    <div className="heatmap" role="img" aria-label="Календарь активности">
       {cells.map((c) => (
-        <span key={c.k} className={`h${c.future ? "x" : lvl(c.v)}`} title={`${c.k} · ${c.v} 题`} />
+        <span key={c.k} className={`h${c.future ? "x" : lvl(c.v)}`} title={`${c.k} · ответов: ${c.v}`} />
       ))}
     </div>
   );

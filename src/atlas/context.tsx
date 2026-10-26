@@ -5,7 +5,7 @@ export const AtlasContext = createContext<Atlas | null>(null);
 
 export function useAtlas() {
   const a = useContext(AtlasContext);
-  if (!a) throw new Error("Atlas not loaded");
+  if (!a) throw new Error("Словарь ещё не загружен.");
   return a;
 }
 

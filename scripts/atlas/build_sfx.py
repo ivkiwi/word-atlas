@@ -26,15 +26,13 @@ AMBIENT = {
     "voyage": "amb-voyage-0",
     "cafe": "amb-cafe-1",
 }
-# Splash: voice line (Jason Chen, eleven_v3, verified by speech-to-text) and door/burst effects.
-SPLASH = {"splash-voice": ("splash/voice-jason-0", -16), "splash-door": ("splash/door-0", -21), "splash-burst": ("splash/burst-2", -22)}
-# Word galaxy: hover twinkle, camera flight, star ignition, two verified voice lines.
+# Russian voice lines use the device's speech synthesis at runtime.
+SPLASH = {"splash-door": ("splash/door-0", -21), "splash-burst": ("splash/burst-2", -22)}
+# Word galaxy: hover twinkle, camera flight and star ignition.
 GALAXY = {
     "twinkle": ("galaxy/twinkle-0", -24),
     "fly": ("galaxy/fly-0", -22),
     "ignite": ("galaxy/ignite-1", -20),
-    "voice-galaxy-hello": ("galaxy/galaxy-hello-0", -17),
-    "voice-galaxy-lit": ("galaxy/galaxy-lit-0", -17),
 }
 MUSIC = {"amb-stars": "galaxy/music-galaxy-0"}
 OUT = ROOT / "public" / "sfx"
@@ -71,7 +69,7 @@ def main():
         run(
             "-i", str(FORGE / f"{src}.mp3"),
             "-af", f"silenceremove=start_periods=1:start_threshold=-50dB,loudnorm=I={lufs}:TP=-2,afade=t=in:d=0.005",
-            "-ac", "1" if name == "splash-voice" else "2", "-b:a", "112k", str(OUT / f"{name}.mp3"),
+            "-ac", "2", "-b:a", "112k", str(OUT / f"{name}.mp3"),
         )
     for name, (src, lufs) in GALAXY.items():
         trim = ",atrim=0:0.4,afade=t=out:st=0.25:d=0.15" if name == "twinkle" else ""

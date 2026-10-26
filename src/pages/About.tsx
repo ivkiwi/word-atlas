@@ -11,18 +11,18 @@ export function About() {
       <header className="about-hero">
         <img src={`${BASE}brand/og.webp`} alt="" />
         <div>
-          <p className="eyebrow">关于词光</p>
-          <h1 className="display">一词一画，点亮雅思。</h1>
+          <p className="eyebrow">О Word Atlas</p>
+          <h1 className="display">У каждого слова — своя история.</h1>
           <p className="lede">
-            词光把雅思阅读 8000 词整理成 {atlas.count.toLocaleString()} 个词条。每个词一幅原创插画，一句日常例句，一句雅思例句，配英美发音、常用搭配和易混提示。学会一个，就在你的星图上点亮一颗星。
+            Word Atlas объединяет {atlas.count.toLocaleString("ru-RU")} английских слов для подготовки к IELTS. У каждого — иллюстрация, бытовой пример и пример в контексте IELTS, британское и американское произношение, сочетания и подсказки. Изучите слово — на вашей карте зажжётся новая звезда.
           </p>
-          <p className="lede">它免费、开源、无需注册。代码用 MIT，词库用 CC BY 4.0，谁都可以拿去用。</p>
+          <p className="lede">Бесплатно, с открытым кодом, без регистрации. Код доступен по лицензии MIT, словарь — по CC BY 4.0.</p>
           <div className="about-actions">
             <a className="btn btn-primary" href={REPO_URL} target="_blank" rel="noreferrer">
-              <Github size={18} /> 在 GitHub 上查看
+              <Github size={18} /> Открыть на GitHub
             </a>
             <a className="btn btn-ghost" href={`${REPO_URL}/tree/main/data`} target="_blank" rel="noreferrer">
-              <Database size={18} /> 下载词库 JSON / CSV
+              <Database size={18} /> Скачать словарь: JSON / CSV
             </a>
           </div>
         </div>
@@ -30,83 +30,83 @@ export function About() {
 
       <div className="about-grid">
         <section className="panel">
-          <h3 className="eyebrow">为什么记得住</h3>
+          <h3 className="eyebrow">Как запоминаются слова</h3>
           <ul className="feature-list">
             <li>
-              <b>先看见。</b>每个词都有一幅画，画的就是第一句例句里发生的事。
+              <b>Сначала увидеть.</b>Иллюстрация к каждому слову показывает ситуацию из первого примера.
             </li>
             <li>
-              <b>再想起。</b>选义、看图补句、听音辨词、拼写，从认得走到会写。
+              <b>Затем вспомнить.</b>Выбор значения, пропуски в предложениях, аудирование и написание: от узнавания к уверенному владению.
             </li>
             <li>
-              <b>刚好在快忘时重逢。</b>FSRS 是新版 Anki 用的开源记忆算法，只在你快要遗忘时安排复习。
+              <b>Повторить вовремя.</b>FSRS — открытый алгоритм интервального повторения, который используется и в Anki. Он предлагает повторить слово, когда оно начинает забываться.
             </li>
             <li>
-              <b>分数诚实。</b>只算第一次作答。答错的词会换个题型再见一面，但不会抬高正确率。
+              <b>Честная статистика.</b>Засчитывается только первый ответ. Слова с ошибками встретятся снова в другом задании; повторные попытки не повышают точность.
             </li>
             <li>
-              <b>进度只属于你。</b>没有账号，没有服务器，数据存在你的浏览器里，随时能导出。
+              <b>Ваш прогресс принадлежит вам.</b>Без аккаунтов и сервера: прогресс хранится в браузере. Его можно в любой момент выгрузить в файл.
             </li>
           </ul>
         </section>
 
         <section className="panel">
-          <h3 className="eyebrow">快捷键</h3>
+          <h3 className="eyebrow">Горячие клавиши</h3>
           <dl className="keys">
             <div>
               <dt>
                 <kbd>⌘</kbd>
-                <kbd>K</kbd> 或 <kbd>/</kbd>
+                <kbd>K</kbd> или <kbd>/</kbd>
               </dt>
-              <dd>搜索任何词</dd>
+              <dd>Поиск по всему словарю</dd>
             </div>
             <div>
               <dt>
                 <kbd>1</kbd>–<kbd>4</kbd>
               </dt>
-              <dd>选择答案</dd>
+              <dd>Выбрать ответ</dd>
             </div>
             <div>
               <dt>
                 <kbd>Enter</kbd>
               </dt>
-              <dd>确认 / 继续</dd>
+              <dd>Ответить / продолжить</dd>
             </div>
             <div>
               <dt>
                 <kbd>←</kbd> <kbd>→</kbd>
               </dt>
-              <dd>词卡里切换上一个、下一个</dd>
+              <dd>Предыдущее / следующее слово в карточке</dd>
             </div>
             <div>
               <dt>
                 <kbd>Esc</kbd>
               </dt>
-              <dd>关闭弹窗</dd>
+              <dd>Закрыть окно</dd>
             </div>
           </dl>
         </section>
 
         <section className="panel">
-          <h3 className="eyebrow">内容从哪里来</h3>
+          <h3 className="eyebrow">Откуда взяты материалы</h3>
           <p className="muted">
-            释义、例句、搭配和提示由大语言模型按统一的词典规范重新撰写；插画由图像模型按统一画风逐词绘制；发音和朗读由 ElevenLabs 合成（英音 Alice，美音 Sarah）。所有内容都经过结构和一致性的自动校验，但没有逐条人工审校。看到错的地方，欢迎在 GitHub 提 Issue，或者直接改数据提 PR。
+            Значения, примеры, сочетания и подсказки созданы языковой моделью по единому словарному стандарту. Иллюстрации сгенерированы в едином стиле, английская озвучка — в ElevenLabs: Alice (британский вариант) и Sarah (американский). Русские переводы подготовлены языковыми моделями по английским и китайским исходникам. Структура и полнота проверяются автоматически; постатейной редакторской проверки не было. Об ошибках можно сообщить в GitHub Issues или предложить исправление через PR.
           </p>
-          <p className="muted">词光不是官方雅思词表，也不承诺提分。它只想把背单词这件事，做得好看一点、扎实一点。</p>
+          <p className="muted">Word Atlas не является официальным словарём IELTS и не гарантирует рост балла. Его задача — сделать изучение слов нагляднее и осмысленнее.</p>
         </section>
 
         <section className="panel">
-          <h3 className="eyebrow">给开发者</h3>
+          <h3 className="eyebrow">Разработчикам</h3>
           <p className="muted">
-            <code>data/word-atlas.json</code> 和 <code>.csv</code> 是完整词库；<code>public/atlas</code> 里是网页用的分块数据、插画和音频。拿去做 Anki 牌组、背词小程序、浏览器插件，或者 AI 应用的评测集，署名即可。
+            <code>data/word-atlas.ru.json</code> и <code>word-atlas.ru.csv</code> — полный русский словарь; <code>public/atlas</code> содержит данные приложения, иллюстрации и аудио. Можно создавать колоды Anki, приложения, расширения и наборы для оценки ИИ, указав авторство.
           </p>
           <a className="link" href={`${REPO_URL}#readme`} target="_blank" rel="noreferrer">
-            阅读文档 <ArrowUpRight size={14} />
+            Документация <ArrowUpRight size={14} />
           </a>
         </section>
       </div>
       <p className="colophon">
-        <Heart size={14} /> 做给每一个在背单词的人。
+        <Heart size={14} /> Для всех, кто учит слова.
       </p>
     </div>
   );

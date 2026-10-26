@@ -1,6 +1,12 @@
-# Word Atlas 词库
+# Данные Word Atlas
 
-- `word-atlas.json`：完整结构化数据
-- `word-atlas.csv`：表格版
+- `word-atlas.ru.json` — полный русский словарь с английскими определениями и примерами.
+- `word-atlas.ru.csv` — табличный экспорт, UTF-8 с BOM для кириллицы.
+- `ru/part-01.jsonl` … `part-12.jsonl` — исходные части русских переводов; одна статья на строку.
+- `word-atlas.json` и `word-atlas.csv` — исходные англо-китайские экспорты, сохранённые без изменений.
 
-字段说明：[../docs/dataset.md](../docs/dataset.md)。授权：CC BY 4.0，署名 “Word Atlas contributors”。
+Исправляйте переводы в `ru/part-*.jsonl`, затем выполняйте `npm run build:atlas`. Команда пересобирает оба русских экспорта и данные приложения без обращения в сеть.
+
+Лицензия **CC BY 4.0**, авторство `Word Atlas contributors — CC BY 4.0`. Русские переводы являются изменениями оригинала; английские учебные тексты сохранены.
+
+См. [формат](../docs/dataset.md), [конвейер](../docs/pipeline.md), [условия](../CONTENT_LICENSE.md).

@@ -1,26 +1,26 @@
-# 内容授权 / Content license
+# Лицензии материалов
 
-## 代码 / Code
+## Код
 
-源代码与界面设计采用 [MIT License](LICENSE)。依赖包保留各自授权；Fraunces 字体为 SIL Open Font License 1.1。
+Код, оригинальный интерфейс и техническая документация — [MIT License](LICENSE). Зависимости сохраняют свои лицензии; Fraunces — SIL Open Font License 1.1.
 
-Source code and UI design are under the [MIT License](LICENSE). Dependencies keep their own licenses; the Fraunces typeface is under the SIL Open Font License 1.1.
+## Словарь, иллюстрации и английские записи
 
-## 词库内容、插画与录音 / Dataset, illustrations and recordings
+В пределах прав, которыми располагают участники, по **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** предоставляются:
 
-以下内容以 **[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)** 提供，在项目维护者能够授予的权利范围内：
+- Словари в `data/`, включая русские переводы и исходные части; значения, определения, примеры, сочетания, словоформы, синонимы, антонимы, подсказки, уровни и темы в `public/atlas/index.json` и `public/atlas/entries/`.
+- Иллюстрации `public/atlas/img/`, `thumb/`, `public/brand/`.
+- Готовые английские записи произношения и примеров `public/atlas/audio/`.
 
-- `data/` 下的词库文件，以及 `public/atlas/index.json`、`public/atlas/entries/` 中的释义、英文释义、例句、译文、搭配、词族、近反义词、提示、分级与分类；
-- `public/atlas/img/`、`public/atlas/thumb/`、`public/brand/` 中的插画；
-- `public/atlas/audio/` 中的发音与例句录音。
+Авторство: **`Word Atlas contributors — CC BY 4.0`**. Добавляйте ссылку на лицензию и отмечайте изменения. Русская версия является изменением [исходного проекта](https://github.com/designfuchen/word-atlas).
 
-The material above is offered under CC BY 4.0, to the extent of the rights the maintainers can grant.
+## Примечания
 
-**署名 / Attribution:** `Word Atlas contributors — CC BY 4.0`，并附授权链接，说明是否做过修改。
+- Проект не заявляет исключительных прав на отдельные английские слова и общий список слов.
+- Исходные тексты и иллюстрации созданы ИИ; английское аудио — ElevenLabs (Alice, британский вариант; Sarah, американский). Русские переводы подготовлены языковыми моделями. Данные проверяются автоматически, без постатейной редакторской проверки, и предоставляются «как есть», без гарантии точности.
+- Лицензия записей относится к готовым файлам, а не голосовым моделям, идентичности голоса или личным правам; она не означает одобрения проекта поставщиком.
+- Русские реплики синтезируются на устройстве. Системные голосовые модели не включены в репозиторий и не передаются по лицензии проекта.
+- Звуки интерфейса и музыка `public/sfx/` предоставляются вместе с приложением, как в исходном проекте; этот текст не расширяет права на сторонние материалы.
+- Это не официальный список IELTS; проект не связан с организаторами экзамена.
 
-### 说明 / Notes
-
-- 单个英文单词与通用词表本身不主张专有权。This project claims no exclusive rights over English words or the bare headword list.
-- 内容由 AI 模型按项目规范生成（文本：大语言模型；插画：图像模型；录音：ElevenLabs 合成语音），经过自动校验，未逐条人工审校，按现状提供，不作准确性担保。Content was generated with AI models under the project's specifications, checked automatically, not proofread entry by entry, and is provided as-is without warranty.
-- 录音授权只涉及这些完成的音频文件，不包含底层声音模型、声音身份或任何人的肖像、人格权，也不表示声音提供方为本项目背书。英音声音为 ElevenLabs “Alice”，美音为 “Sarah”。The recording license covers the finished audio files only, not the underlying voice models or voice identities, and implies no endorsement. Voices: ElevenLabs "Alice" (UK) and "Sarah" (US).
-- 不是官方雅思（IELTS）词表，与雅思考试主办方无关。Not an official IELTS list and not affiliated with the IELTS partners.
+Юридический текст лицензии кода — [LICENSE](LICENSE), полный текст лицензии контента — по ссылке CC BY 4.0 выше.

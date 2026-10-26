@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isMastered, preview, Rating, review } from "./srs";
+import { formatInterval, isMastered, preview, Rating, review } from "./srs";
 
 const DAY = 86400000;
+
+test("review intervals use Russian units and decimal separator", () => {
+  assert.equal(formatInterval(0), "<1 мин");
+  assert.equal(formatInterval(10 * 60000), "10 мин");
+  assert.equal(formatInterval(2 * 3600000), "2 ч");
+  assert.equal(formatInterval(2 * DAY), "2 дн.");
+  assert.equal(formatInterval(60 * DAY), "2 мес.");
+  assert.equal(formatInterval(365 * DAY), "1,0 г.");
+});
 
 test("a new card answered Good is scheduled soon, Again sooner", () => {
   const now = Date.UTC(2026, 9, 25);

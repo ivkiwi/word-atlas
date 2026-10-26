@@ -36,8 +36,8 @@ export function Speak({
       type="button"
       className={`speak speak-${size} ${on ? "is-on" : ""} ${label ? "has-label" : ""} ${className}`}
       onClick={run}
-      aria-label={typeof label === "string" ? `朗读 ${label}` : `朗读 ${text}`}
-      title={kbd ? `朗读（${kbd}）` : "朗读"}
+      aria-label={typeof label === "string" ? `Произнести ${label}` : `Произнести ${text}`}
+      title={kbd ? `Произнести（${kbd}）` : "Произнести"}
     >
       <span className="speak-icon">
         <Volume2 size={size === "lg" ? 22 : size === "sm" ? 15 : 18} strokeWidth={1.8} />

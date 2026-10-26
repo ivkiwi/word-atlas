@@ -57,10 +57,14 @@ export function hashSeed(s: string) {
   return h >>> 0;
 }
 
-/** Collocations are stored as "english｜中文". */
+/** Collocations are stored as "English｜русский перевод". */
 export const splitPair = (s: string) => {
-  const [en, zh] = s.split(/[｜|]/);
-  return { en: (en || "").trim(), zh: (zh || "").trim() };
+  const [en, ru] = s.split(/[｜|]/);
+  return { en: (en || "").trim(), ru: (ru || "").trim() };
 };
 
-export const plural = (n: number) => n.toLocaleString("en-US");
+const russianPlurals = new Intl.PluralRules("ru-RU");
+export function plural(n: number, one: string, few: string, many: string) {
+  const form = russianPlurals.select(n);
+  return `${n.toLocaleString("ru-RU")} ${form === "one" ? one : form === "many" ? many : few}`;
+}

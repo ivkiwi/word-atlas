@@ -4,8 +4,8 @@ import { Rating } from "../store/srs";
 import type { ActiveSession } from "../store/store";
 import { toast } from "./Toast";
 
-const SERIF = '"Fraunces Variable", "Songti SC", "Noto Serif SC", Georgia, serif';
-const SANS = '-apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+const SERIF = '"Fraunces Variable", Georgia, "Times New Roman", serif';
+const SANS = '-apple-system, "Segoe UI", Arial, sans-serif';
 
 const load = (src: string) =>
   new Promise<HTMLImageElement | null>((r) => {
@@ -27,8 +27,8 @@ export async function shareSession(atlas: Atlas, s: ActiveSession) {
     await document.fonts.load(`600 96px ${SERIF}`).catch(() => null);
     ctx.fillStyle = "#F3ECDF";
     ctx.fillRect(0, 0, W, H);
-    const ids = [...new Set(s.steps.map((x) => x.id))].slice(0, 9);
-    const refs = ids.map((id) => atlas.byId.get(id)!).filter(Boolean);
+    const ids = [...new Set(s.steps.map((x) => x.id))];
+    const refs = ids.slice(0, 9).map((id) => atlas.byId.get(id)!).filter(Boolean);
     const pad = 64;
     const gapPx = 16;
     const cell = (W - pad * 2 - gapPx * 2) / 3;
@@ -59,22 +59,22 @@ export async function shareSession(atlas: Atlas, s: ActiveSession) {
     const d = new Date();
     ctx.fillStyle = "#8A8C96";
     ctx.font = `500 28px ${SANS}`;
-    ctx.fillText(`${d.getMonth() + 1}月${d.getDate()}日 · 今天点亮了 ${ids.length} 颗星`, pad, top - 24);
+    ctx.fillText(`${d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })} · Сегодня открыто звёзд: ${ids.length}`, pad, top - 24, W - pad * 2);
     ctx.fillStyle = "#1E2640";
     ctx.font = `600 64px ${SERIF}`;
-    ctx.fillText(`学了 ${ids.length} 个词，首次正确 ${st.accuracy}%`, pad, top + 52, W - pad * 2);
+    ctx.fillText(`Слов: ${ids.length} · Точность: ${st.accuracy}%`, pad, top + 52, W - pad * 2);
     const wrong = Object.values(s.graded).filter((g) => g === Rating.Again).length;
     ctx.font = `400 30px ${SANS}`;
     ctx.fillStyle = "#5A6075";
-    ctx.fillText(`新词 ${s.newIds.length} · 复习 ${s.reviewIds.length} · 需要再见面 ${wrong}`, pad, top + 112);
+    ctx.fillText(`Новых: ${s.newIds.length} · Повторено: ${s.reviewIds.length} · С ошибками: ${wrong}`, pad, top + 112, W - pad * 2);
     ctx.fillStyle = "rgba(30,38,64,.14)";
     ctx.fillRect(pad, H - 116, W - pad * 2, 2);
     ctx.fillStyle = "#1E2640";
     ctx.font = `600 34px ${SERIF}`;
-    ctx.fillText("词光 · Word Atlas", pad, H - 58);
+    ctx.fillText("Word Atlas · Атлас слов", pad, H - 58);
     ctx.font = `400 26px ${SANS}`;
     ctx.fillStyle = "#8A8C96";
-    const tag = "一词一画，点亮雅思";
+    const tag = "Слова в картинках. Подготовка к IELTS";
     ctx.fillText(tag, W - pad - ctx.measureText(tag).width, H - 60);
     const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));
     if (!blob) throw new Error();
@@ -88,8 +88,8 @@ export async function shareSession(atlas: Atlas, s: ActiveSession) {
     a.download = file.name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast("成绩卡已保存", "ok");
+    toast("Карточка результата сохранена", "ok");
   } catch {
-    toast("成绩卡生成失败", "warn");
+    toast("Не удалось создать карточку результата", "warn");
   }
 }

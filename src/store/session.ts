@@ -49,24 +49,26 @@ function quizKind(ref: WordRef, p: Progress, s: Settings, salt: number): QuizKin
   return roll < 50 ? "listen" : hasImg ? "picture" : "meaning";
 }
 
+const meaningCore = (value: string) => normalize(value).replace(/^(?:\p{L}+\.|союз)\s*/u, "").split(/[;,]/)[0].trim().replace(/[.!?]+$/, "");
+
 /** Distractors that look plausible: same level, similar spelling or length, different meaning. */
 export function distractors(atlas: Atlas, ref: WordRef, kind: QuizKind, seed: number) {
   const target = normalize(ref.word);
-  const zhCore = ref.zh.replace(/^[a-z.]+\s*/, "").split(/[；;，,]/)[0];
+  const ruCore = meaningCore(ref.ru);
   const scored: [number, WordRef][] = [];
   const pool = atlas.words;
   const start = Math.max(0, ref.order - 400);
   for (let i = start; i < Math.min(pool.length, ref.order + 400); i++) {
     const w = pool[i];
     if (w.id === ref.id || normalize(w.word) === target) continue;
-    if (zhCore && w.zh.includes(zhCore)) continue;
+    if (ruCore && normalize(w.ru).includes(ruCore)) continue;
     let score = hashSeed(w.id + seed) % 100;
     if (kind === "listen" || kind === "picture") {
       if (w.word[0]?.toLowerCase() === target[0]) score += 120;
       score += Math.max(0, 60 - Math.abs(w.word.length - target.length) * 20);
     } else {
       if (w.cefr === ref.cefr) score += 40;
-      if (w.zh.split(" ")[0] === ref.zh.split(" ")[0]) score += 60; // same part of speech
+      if (w.ru.split(" ")[0] === ref.ru.split(" ")[0]) score += 60; // same part of speech
     }
     scored.push([score, w]);
   }
@@ -74,7 +76,7 @@ export function distractors(atlas: Atlas, ref: WordRef, kind: QuizKind, seed: nu
   const seen = new Set<string>();
   const picks: string[] = [];
   for (const [, w] of scored) {
-    const key = kind === "meaning" ? w.zh : normalize(w.word);
+    const key = kind === "meaning" ? meaningCore(w.ru) : normalize(w.word);
     if (seen.has(key)) continue;
     seen.add(key);
     picks.push(w.id);

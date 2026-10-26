@@ -48,13 +48,13 @@ export function AmbiencePicker() {
   const on = ambience !== "off";
   return (
     <div className="amb" ref={box}>
-      <button className={`icon-btn amb-btn ${on ? "is-on" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="环境声" title="环境声">
+      <button className={`icon-btn amb-btn ${on ? "is-on" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Фоновые звуки" title="Фоновые звуки">
         <AudioLines size={19} />
         {on && <span className="amb-bars" aria-hidden="true"><i /><i /><i /></span>}
       </button>
       {open && (
-        <div className="amb-pop" role="dialog" aria-label="环境声">
-          <p className="eyebrow">环境声 · 专注陪伴</p>
+        <div className="amb-pop" role="dialog" aria-label="Фоновые звуки">
+          <p className="eyebrow">Звуки для концентрации</p>
           <ul>
             {AMBIENCE.map(({ id, label }) => {
               const Icon = ICONS[id];
@@ -72,16 +72,16 @@ export function AmbiencePicker() {
             <li>
               <button className={!on ? "is-on" : ""} onClick={() => store.settings({ ambience: "off" })} aria-pressed={!on}>
                 <VolumeX size={18} strokeWidth={1.7} />
-                <span>安静</span>
+                <span>Тишина</span>
                 {!on && <Check size={16} />}
               </button>
             </li>
           </ul>
           <label className="amb-vol">
-            <span>音量</span>
+            <span>Громкость</span>
             <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => store.settings({ ambienceVolume: Number(e.target.value) })} disabled={!on} />
           </label>
-          <p className="amb-note">读单词时会自动压低环境声。</p>
+          <p className="amb-note">Во время произношения фоновый звук становится тише.</p>
         </div>
       )}
     </div>
