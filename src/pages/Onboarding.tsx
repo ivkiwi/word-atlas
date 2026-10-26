@@ -4,6 +4,7 @@ import { useAtlas } from "../atlas/context";
 import { store } from "../store/store";
 
 const LEVELS = [
+  ["A1", "Начальный", "Только начинаю учить английский"],
   ["A2", "Базовый", "Хочу увереннее владеть повседневными словами"],
   ["B1", "Средний", "Цель IELTS: 5,5–6 баллов"],
   ["B2", "Выше среднего", "Цель IELTS: 6,5–7 баллов"],
@@ -12,7 +13,7 @@ const LEVELS = [
 
 export function Onboarding() {
   const atlas = useAtlas();
-  const [level, setLevel] = useState(1);
+  const [level, setLevel] = useState(0);
   const [goal, setGoal] = useState(10);
   const finish = () => store.settings({ onboarded: true, startLevel: atlas.cefr.indexOf(LEVELS[level][0]), dailyNew: goal });
   return (

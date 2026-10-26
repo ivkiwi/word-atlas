@@ -3446,6 +3446,10 @@ code {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+/* A1 (absolute beginners) gets its own row above the other levels. */
+.choice-grid .choice:first-child {
+  grid-column: 1 / -1;
+}
 .choice {
   display: grid;
   justify-items: start;
