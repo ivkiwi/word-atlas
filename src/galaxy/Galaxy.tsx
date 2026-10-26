@@ -5,6 +5,7 @@ import type { WordRef } from "../atlas/types";
 import { openWord } from "../lib/router";
 import { cue } from "../lib/sound";
 import { play } from "../lib/audio";
+import { VOICE_LINES } from "../config";
 import { isMastered } from "../store/srs";
 import { store, useStore } from "../store/store";
 import { Illustration } from "../ui/Illustration";
@@ -139,7 +140,7 @@ export function Galaxy({
         if (sfx && k < 12) void cue("ignite");
       }, 1400 + k * 180),
     );
-    const voice = window.setTimeout(() => sfx && void play(null, "Сегодня на вашей карте зажглись новые звёзды.", "ru"), 1600 + ids.length * 180);
+    const voice = window.setTimeout(() => sfx && VOICE_LINES && void play(null, "Сегодня на вашей карте зажглись новые звёзды.", "ru"), 1600 + ids.length * 180);
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(voice);
@@ -157,7 +158,7 @@ export function Galaxy({
 
   // First visit to the full galaxy: one quiet sentence explaining what it is.
   useEffect(() => {
-    if (mode !== "full") return;
+    if (mode !== "full" || !VOICE_LINES) return;
     try {
       if (localStorage.getItem("word-atlas:galaxy-hello")) return;
     } catch {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { playFile, preloadFiles } from "../lib/sound";
 import { play } from "../lib/audio";
+import { VOICE_LINES } from "../config";
 import { dayKey, store } from "../store/store";
 import { Mark } from "./Logo";
 
@@ -37,7 +38,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
     if (sound && store.get().settings.sfx) {
       void playFile("splash-burst.mp3", 0.55);
       void playFile("splash-door.mp3", 0.6, 0.12);
-      void play(null, "Добро пожаловать в Атлас слов.", "ru");
+      if (VOICE_LINES) void play(null, "Добро пожаловать в Атлас слов.", "ru");
     }
     setPhase("open");
     window.setTimeout(onDone, reduce ? 300 : 1900);

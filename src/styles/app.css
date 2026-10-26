@@ -1,6 +1,23 @@
 /* Word Atlas — design system
    Paper, ink and four field-guide pigments, matched to the illustration palette. */
 
+/* Fraunces has no Cyrillic: Russian serif text falls through to Literata (Cyrillic subset only). */
+@font-face {
+  font-family: "Literata Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url("../../node_modules/@fontsource-variable/literata/files/literata-cyrillic-opsz-normal.woff2") format("woff2-variations");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Literata Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url("../../node_modules/@fontsource-variable/literata/files/literata-cyrillic-opsz-italic.woff2") format("woff2-variations");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
 :root {
   /* Light: bright ivory paper lit from above; gold is the colour of "light". */
   --paper: #f6f1e7;
@@ -30,7 +47,7 @@
   --shadow-sm: 0 1px 2px rgba(30, 38, 64, 0.06), 0 2px 6px -2px rgba(30, 38, 64, 0.06);
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 2px rgba(30, 38, 64, 0.05), 0 18px 40px -24px rgba(30, 38, 64, 0.28);
   --shadow-lg: 0 30px 80px -30px rgba(20, 26, 46, 0.45), 0 8px 24px -12px rgba(20, 26, 46, 0.2);
-  --serif: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --serif: "Fraunces Variable", "Literata Variable", Georgia, "Times New Roman", serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --r-sm: 10px;

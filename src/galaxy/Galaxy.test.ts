@@ -27,6 +27,7 @@ function setup(sfx = true) {
     },
     "react/jsx-runtime": { jsx() {}, jsxs() {} },
     "../atlas/context": { useAtlas: () => ({ topics: [], words: [] }) },
+    "../config": { VOICE_LINES: true },
     "../store/store": { useStore: (select: (state: unknown) => unknown) => select(state), store: { get: () => state } },
     "../lib/audio": { play: () => { calls++; return spoken; } },
     "./layout": { layoutGalaxy: () => ({ n: 0, ids: [], index: new Map() }) },

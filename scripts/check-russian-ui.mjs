@@ -205,7 +205,7 @@ try {
     await failure.close();
   }
 
-  // Russian lines are spoken only with a Russian device voice; otherwise they stay silent.
+  // Russian voice lines are muted (VOICE_LINES = false); re-enable the spoken check when they return.
   for (const voices of [[{ lang: "ru-RU", name: "Milena" }], [{ lang: "en-GB", name: "Daniel" }]]) {
     const voice = await makeContext(375, "light", { splash: true, sfx: true });
     await voice.addInitScript((voices) => {
@@ -217,13 +217,9 @@ try {
     const voicePage = await voice.newPage();
     await voicePage.goto(app, { waitUntil: "networkidle" });
     await voicePage.locator(".splash").click({ position: { x: 180, y: 250 } });
-    if (voices[0].lang === "ru-RU") {
-      await voicePage.waitForFunction(() => window.__spoken.length > 0);
-      assert.deepEqual(await voicePage.evaluate(() => window.__spoken[0]), { text: "Добро пожаловать в Атлас слов.", lang: "ru-RU" });
-    } else {
-      await voicePage.waitForTimeout(1500);
-      assert.deepEqual(await voicePage.evaluate(() => window.__spoken.filter((s) => s.lang === "ru-RU")), []);
-    }
+    // VOICE_LINES is off in src/config.ts: no Russian line may be spoken, with or without a Russian voice.
+    await voicePage.waitForTimeout(1500);
+    assert.deepEqual(await voicePage.evaluate(() => window.__spoken.filter((s) => s.lang === "ru-RU")), []);
     await voice.close();
     assertions++;
   }

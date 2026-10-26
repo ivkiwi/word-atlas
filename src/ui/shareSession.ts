@@ -4,7 +4,7 @@ import { Rating } from "../store/srs";
 import type { ActiveSession } from "../store/store";
 import { toast } from "./Toast";
 
-const SERIF = '"Fraunces Variable", Georgia, "Times New Roman", serif';
+const SERIF = '"Fraunces Variable", "Literata Variable", Georgia, "Times New Roman", serif';
 const SANS = '-apple-system, "Segoe UI", Arial, sans-serif';
 
 const load = (src: string) =>

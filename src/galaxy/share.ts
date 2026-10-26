@@ -1,6 +1,6 @@
 import { toast } from "../ui/Toast";
 
-const SERIF = '"Fraunces Variable", Georgia, "Times New Roman", serif';
+const SERIF = '"Fraunces Variable", "Literata Variable", Georgia, "Times New Roman", serif';
 const SANS = '-apple-system, "Segoe UI", Arial, sans-serif';
 
 /** "My word galaxy": the live render framed as a 4:5 poster. */
