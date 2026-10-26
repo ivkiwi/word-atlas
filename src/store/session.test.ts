@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { after, test } from "node:test";
-import type { Atlas, WordRef } from "../atlas/types";
+import type { Atlas, IndexRow, WordRef } from "../atlas/types";
 import { answer, advance, distractors } from "./session";
 import { Rating } from "./srs";
 import { emptyProgress, store, type Step, type QuizKind } from "./store";
@@ -46,6 +47,27 @@ test("meaning distractors do not repeat each other's secondary meanings", () => 
     assert.equal(options.length, 4);
   }
 });
+
+for (const [targetId, otherId, shared] of [["too", "also", "тоже"], ["see", "understand", "понимать"]]) {
+  test(`distractors use secondary senses from the real index: ${targetId}/${otherId}`, () => {
+    const index = JSON.parse(readFileSync(new URL("../../public/atlas/index.json", import.meta.url), "utf8")) as { words: IndexRow[] };
+    const words: WordRef[] = [targetId, otherId, "library", "table", "tall"].map((id, order) => {
+      const row = index.words.find((r) => r[0] === id);
+      assert.ok(row, id);
+      return { id: row[0], word: row[1], ru: row[2], ipa: row[3], cefr: row[4], topic: row[5], media: row[6], search: row[7], order };
+    });
+    const atlas = { words, byId: new Map(words.map((w) => [w.id, w])) } as Atlas;
+    assert.ok(!words[0].ru.includes(shared));
+    assert.ok(words[0].search?.includes(shared));
+    assert.ok(words[1].ru.includes(shared));
+    for (let seed = 0; seed < 20; seed++) {
+      const options = distractors(atlas, words[0], "meaning", seed);
+      assert.ok(!options.includes(otherId), `${targetId}: ${options}`);
+      assert.equal(options.length, 4);
+      assert.ok(options.includes(targetId));
+    }
+  });
+}
 
 function sessionFixture() {
   const atlas = atlasOf(["сущ. окно", "сущ. стол", "гл. бежать", "прил. высокий"]);

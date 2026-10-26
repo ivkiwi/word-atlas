@@ -4,28 +4,62 @@ const VERSION = `${PREFIX}ru-v3`;
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 
+function htmlURLs(html, base) {
+  return new Set([...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)].map((m) => new URL(m[1], base).href).filter((u) => u.startsWith(base)));
+}
+
+function cssURLs(css, url) {
+  return [...css.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s)]+))\s*\)/g)].map((m) => new URL(m[1] ?? m[2] ?? m[3], url).href).filter((u) => u.startsWith(self.registration.scope));
+}
+
+async function saveShell(request, response) {
+  const body = response.clone();
+  const cache = await caches.open(SHELL);
+  await cache.put(request, response);
+  const url = new URL(request.url || request);
+  if (url.pathname.endsWith("/index.json")) {
+    const index = await body.json().catch(() => null);
+    if (typeof index?.rev !== "string" || !index.rev) return;
+    const prefix = new URL("entries/", url).href;
+    for (const key of await cache.keys())
+      if (key.url.startsWith(prefix) && new URL(key.url).searchParams.get("v") !== index.rev) await cache.delete(key);
+  } else {
+    const base = self.registration.scope;
+    const keep = htmlURLs(await body.text(), base);
+    for (const asset of [...keep]) {
+      if (!new URL(asset).pathname.endsWith(".css")) continue;
+      const css = await caches.match(asset, { cacheName: SHELL }) || await fetch(asset, { cache: "no-cache" }).catch(() => null);
+      // Keep old assets if we cannot establish the current stylesheet's dependencies.
+      if (!css?.ok) return;
+      for (const dependency of cssURLs(await css.clone().text(), asset)) keep.add(dependency);
+      await cache.put(asset, css);
+    }
+    const prefix = new URL("assets/", base).href;
+    for (const key of await cache.keys())
+      if (key.url.startsWith(prefix) && !keep.has(key.url)) await cache.delete(key);
+  }
+}
+
 async function precache() {
   const cache = await caches.open(SHELL);
   const base = self.registration.scope;
   const page = await fetch(new URL("./", base), { cache: "no-cache" });
   if (!page.ok) throw new Error("Could not cache the app shell");
   const html = await page.clone().text();
-  const urls = new Set([new URL("atlas/index.json", base).href]);
-  for (const match of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
-    const url = new URL(match[1], base);
-    if (url.href.startsWith(base)) urls.add(url.href);
-  }
+  const urls = htmlURLs(html, base);
+  urls.add(new URL("atlas/index.json", base).href);
   await Promise.all([...urls].map(async (url) => {
     const res = await fetch(url, { cache: "no-cache" });
     if (!res.ok) throw new Error(`Could not cache ${url}`);
     if (new URL(url).pathname.endsWith(".css")) {
       const css = await res.clone().text();
-      const fonts = new Set([...css.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s)]+))\s*\)/g)].map((m) => new URL(m[1] ?? m[2] ?? m[3], url).href).filter((u) => u.startsWith(base)));
+      const fonts = new Set(cssURLs(css, url));
       await cache.addAll([...fonts]);
     }
-    await cache.put(url, res);
+    if (new URL(url).pathname.endsWith("/index.json")) await saveShell(url, res);
+    else await cache.put(url, res);
   }));
-  await cache.put(base, page.clone());
+  await saveShell(base, page.clone());
   await cache.put(new URL("index.html", base), page);
 }
 
@@ -77,7 +111,7 @@ self.addEventListener("fetch", (event) => {
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            event.waitUntil(caches.open(SHELL).then((c) => c.put(req, copy)));
+            event.waitUntil(saveShell(req, copy));
           }
           return res;
         })

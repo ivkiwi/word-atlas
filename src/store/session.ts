@@ -54,7 +54,7 @@ const meanings = (value: string) => normalize(value).split(/[;,]/).map((s) => s.
 /** Distractors that look plausible: same level, similar spelling or length, different meaning. */
 export function distractors(atlas: Atlas, ref: WordRef, kind: QuizKind, seed: number) {
   const target = normalize(ref.word);
-  const targetMeanings = new Set(meanings(ref.ru));
+  const targetMeanings = new Set(meanings(ref.search ?? ref.ru));
   const scored: [number, WordRef][] = [];
   const pool = atlas.words;
   const start = Math.max(0, ref.order - 400);

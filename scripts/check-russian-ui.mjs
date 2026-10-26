@@ -32,7 +32,8 @@ async function checkPage(page) {
 }
 
 async function makeContext(width, theme = "light", patch = {}) {
-  const context = await browser.newContext({ viewport: { width, height: width < 600 ? 812 : 900 }, deviceScaleFactor: 1, reducedMotion: "reduce", colorScheme: theme, acceptDownloads: true });
+  // Block service workers so page.route() failure injection also works against a production build.
+  const context = await browser.newContext({ viewport: { width, height: width < 600 ? 812 : 900 }, deviceScaleFactor: 1, reducedMotion: "reduce", colorScheme: theme, acceptDownloads: true, serviceWorkers: "block" });
   await context.addInitScript((saved) => {
     if (!localStorage.getItem("word-atlas:settings")) localStorage.setItem("word-atlas:settings", JSON.stringify(saved));
     Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false });

@@ -11,6 +11,9 @@ function setup(voices: { lang: string; name: string }[] = []) {
   const ducks: boolean[] = [];
   const sounds: Audio[] = [];
   const spoken: Utterance[] = [];
+  const listeners = new Set<() => void>();
+  const timers = new Map<number, { callback: () => void; delay: number }>();
+  let timerId = 0;
   class Audio {
     onended: (() => void) | null = null;
     onpause: (() => void) | null = null;
@@ -28,10 +31,18 @@ function setup(voices: { lang: string; name: string }[] = []) {
     voice?: { lang: string; name: string };
     constructor(public text: string) {}
   }
-  const speechSynthesis = { getVoices: () => voices, speak: (u: Utterance) => spoken.push(u), cancel() {} };
+  const speechSynthesis = {
+    getVoices: () => voices, speak: (u: Utterance) => { spoken.push(u); }, cancel() {},
+    addEventListener: (_name: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_name: string, listener: () => void) => listeners.delete(listener),
+  };
   const exports = {} as typeof import("./audio");
-  runInNewContext(source, { exports, require: () => ({ duck: (on: boolean) => ducks.push(on) }), window: { speechSynthesis }, speechSynthesis, SpeechSynthesisUtterance: Utterance, Audio });
-  return { audio: exports, sounds, spoken, ducks, Audio };
+  runInNewContext(source, {
+    exports, require: () => ({ duck: (on: boolean) => ducks.push(on) }), window: { speechSynthesis }, speechSynthesis, SpeechSynthesisUtterance: Utterance, Audio,
+    setTimeout: (callback: () => void, delay: number) => { timers.set(++timerId, { callback, delay }); return timerId; },
+    clearTimeout: (id: number) => timers.delete(id),
+  });
+  return { audio: exports, sounds, spoken, ducks, Audio, listeners, timers, speechSynthesis };
 }
 
 test("a recording error after play starts falls back to TTS and releases duck", async () => {
@@ -113,4 +124,64 @@ test("English TTS still uses the device default without a matching voice", async
   assert.equal(spoken[0].rate, 0.7 * 0.95);
   spoken[0].onend?.();
   assert.equal(await result, "device");
+});
+
+test("Russian speech waits for asynchronous voices and removes its wait handlers", async () => {
+  const { audio, spoken, listeners, timers, speechSynthesis } = setup();
+  const result = audio.play(null, "Добро пожаловать", "ru");
+  assert.equal(listeners.size, 1);
+  assert.equal(spoken.length, 0);
+  listeners.forEach((listener) => listener());
+  assert.equal(listeners.size, 1, "an empty voiceschanged event must not end the wait");
+  const ru = { lang: "ru-RU", name: "Russian" };
+  speechSynthesis.getVoices = () => [ru];
+  listeners.forEach((listener) => listener());
+  await tick();
+  assert.equal(spoken[0].voice, ru);
+  assert.equal(listeners.size, 0);
+  assert.equal(timers.size, 0);
+  spoken[0].onend?.();
+  assert.equal(await result, "device");
+});
+
+for (const loaded of [false, true]) test(`Russian voice timeout rechecks the list (loaded=${loaded})`, async () => {
+  const { audio, spoken, ducks, listeners, timers, speechSynthesis } = setup();
+  const result = audio.play(null, "Добро пожаловать", "ru");
+  const timer = [...timers.values()][0];
+  assert.ok(timer);
+  assert.equal(timer.delay, 1000);
+  if (loaded) speechSynthesis.getVoices = () => [{ lang: "ru-RU", name: "Russian" }];
+  timer.callback();
+  await tick();
+  assert.equal(listeners.size, 0);
+  assert.equal(timers.size, 0);
+  assert.equal(spoken.length, loaded ? 1 : 0);
+  spoken[0]?.onend?.();
+  assert.equal(await result, loaded ? "device" : "unsupported");
+  assert.equal(ducks.at(-1), false);
+});
+
+test("replacing speech while waiting for voices cannot start a stale Russian line", async () => {
+  const { audio, spoken, ducks, listeners, timers, speechSynthesis } = setup();
+  const first = audio.play(null, "Добро пожаловать", "ru");
+  const second = audio.play(null, "word", "uk");
+  assert.equal(await first, "stopped");
+  speechSynthesis.getVoices = () => [{ lang: "ru-RU", name: "Russian" }];
+  listeners.forEach((listener) => listener());
+  assert.equal(listeners.size, 0);
+  assert.equal(timers.size, 0);
+  assert.equal(spoken.length, 1);
+  assert.equal(spoken[0].text, "word");
+  assert.equal(ducks.at(-1), true);
+  spoken[0].onend?.();
+  assert.equal(await second, "device");
+});
+
+for (const failure of ["event", "throw"]) test(`failed TTS is not reported as spoken (${failure})`, async () => {
+  const { audio, spoken, ducks, speechSynthesis } = setup([{ lang: "ru-RU", name: "Russian" }]);
+  if (failure === "throw") speechSynthesis.speak = () => { throw new Error("speech blocked"); };
+  const result = audio.play(null, "Добро пожаловать", "ru");
+  if (failure === "event") spoken[0].onerror?.();
+  assert.equal(await result, "unsupported");
+  assert.equal(ducks.at(-1), false);
 });

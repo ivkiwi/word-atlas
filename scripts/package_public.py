@@ -19,6 +19,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+EXPORT_MARKER = ".word-atlas-export"
+EXPORT_OWNER = b"word-atlas-public-export\n"
 TOP = {
     "README.md", "README.en.md", "LICENSE", "CONTENT_LICENSE.md", "CONTRIBUTING.md", "SECURITY.md",
     ".gitignore", "package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "index.html",
@@ -144,6 +146,49 @@ def self_test() -> int:
                     self.assertFalse((out / "old.txt").exists())
                     self.assertEqual((out / ".git" / "sentinel").read_text(), "keep git")
 
+        def test_scan_failure_can_retry_in_the_same_new_or_previous_export(self):
+            for previous in (False, True):
+                with self.subTest(previous=previous):
+                    out = self.base / ("previous-failed" if previous else "new-failed")
+                    if previous:
+                        self.assertEqual(main(["--out", str(out)]), 0)
+                        (out / ".git").mkdir()
+                        (out / ".git" / "sentinel").write_text("keep git")
+                    blocked = self.root / "LICENSE"
+                    blocked.write_text("sk-" + "x" * 24)
+                    self.assertEqual(main(["--out", str(out)]), 1)
+                    self.assertTrue((out / "README.md").is_file())
+                    self.assertFalse((out / "LICENSE").exists())
+                    if previous:
+                        self.assertEqual((out / ".git" / "sentinel").read_text(), "keep git")
+                    blocked.write_text("public license")
+                    self.assertEqual(main(["--out", str(out)]), 0)
+                    self.assertEqual((out / "LICENSE").read_text(), "public license")
+                    manifest = json.loads((out / "PUBLIC_MANIFEST.json").read_text())
+                    self.assertEqual({item["path"] for item in manifest["items"]}, {"README.md", "LICENSE"})
+                    if previous:
+                        self.assertEqual((out / ".git" / "sentinel").read_text(), "keep git")
+
+        def test_ownership_marker_cannot_bypass_path_safety(self):
+            (self.base / EXPORT_MARKER).write_bytes(EXPORT_OWNER)
+            self.assertEqual(main(["--out", str(self.base)]), 2)
+            self.assertEqual((self.root / "README.md").read_text(), "public source")
+            out = self.base / "unrelated-marker"
+            out.mkdir()
+            (out / "important.txt").write_text("keep file")
+            marker = out / EXPORT_MARKER
+            marker.write_text("not an export")
+            self.assertEqual(main(["--out", str(out)]), 2)
+            self.assertEqual((out / "important.txt").read_text(), "keep file")
+            marker.unlink()
+            outside = self.base / "outside.txt"
+            outside.write_text("keep outside")
+            marker.symlink_to(outside)
+            (out / "PUBLIC_MANIFEST.json").write_text("{}")
+            self.assertEqual(main(["--out", str(out)]), 2)
+            self.assertEqual(outside.read_text(), "keep outside")
+            self.assertEqual((out / "important.txt").read_text(), "keep file")
+
     result = unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromTestCase(ExportSafetyTest))
     return 0 if result.wasSuccessful() else 1
 
@@ -160,16 +205,22 @@ def main(argv=None) -> int:
     if out == ROOT or ROOT in out.parents or out in ROOT.parents:
         print("refusing to export inside the project or over a project ancestor")
         return 2
-    if out.exists() and (not out.is_dir() or (any(out.iterdir()) and not (out / "PUBLIC_MANIFEST.json").is_file())):
-        print("refusing to replace a non-empty directory without PUBLIC_MANIFEST.json")
+    marker = out / EXPORT_MARKER
+    if marker.is_symlink():
+        print("refusing a symlinked export marker")
+        return 2
+    owned = marker.is_file() and marker.read_bytes() == EXPORT_OWNER
+    if out.exists() and (not out.is_dir() or (any(out.iterdir()) and not (out / "PUBLIC_MANIFEST.json").is_file() and not owned)):
+        print("refusing to replace a non-empty directory without an export manifest or ownership marker")
         return 2
     keep_git = (out / ".git").exists()
-    if out.exists():
-        for child in out.iterdir():
-            if child.name == ".git":
-                continue
-            shutil.rmtree(child) if child.is_dir() else child.unlink()
     out.mkdir(parents=True, exist_ok=True)
+    # shortcut: rebuild in place with a retry marker; stage exports if atomic publication is needed.
+    marker.write_bytes(EXPORT_OWNER)
+    for child in out.iterdir():
+        if child.name in {".git", EXPORT_MARKER}:
+            continue
+        shutil.rmtree(child) if child.is_dir() else child.unlink()
     exact = secrets()
     files, problems, total = [], [], 0
     for path in sorted(ROOT.rglob("*")):

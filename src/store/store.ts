@@ -272,8 +272,7 @@ function loadProfile(profiles: Profiles, persist = false) {
 
 export function flush() {
   window.clearTimeout(saveTimer);
-  let registered;
-  try { registered = read(PROFILES_KEY, true); } catch { saveError(true); return false; }
+  const registered = read(PROFILES_KEY);
   const profiles = registered ? sanitizeProfiles(registered) : state.profiles;
   // A deleted profile must not be recreated by a delayed write from another tab.
   if (!profiles.list.some((p) => p.id === state.profiles.current)) {
@@ -320,6 +319,15 @@ if (typeof window !== "undefined") {
   });
 }
 
+function profilesForEdit() {
+  if (!flush()) return null;
+  try { return sanitizeProfiles(read(PROFILES_KEY, true) ?? state.profiles); } catch (error) {
+    if (error instanceof SyntaxError) return state.profiles;
+    saveError(true);
+    return null;
+  }
+}
+
 export const store = {
   get: () => state,
   subscribe(l: () => void) {
@@ -327,28 +335,30 @@ export const store = {
     return () => listeners.delete(l);
   },
   switchProfile(id: string) {
-    if (!flush()) return false;
-    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    const profiles = profilesForEdit();
+    if (!profiles) return false;
     if (!profiles.list.some((p) => p.id === id)) return false;
     return loadProfile({ ...profiles, current: id }, true);
   },
   addProfile(name: string) {
     name = name.trim();
-    if (!name || name.length > 40 || !flush()) return false;
-    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    if (!name || name.length > 40) return false;
+    const profiles = profilesForEdit();
+    if (!profiles) return false;
     const id = crypto.randomUUID();
     return loadProfile({ current: id, list: [...profiles.list, { id, name }] }, true);
   },
   renameProfile(id: string, name: string) {
     name = name.trim();
-    if (!name || name.length > 40 || !flush()) return false;
-    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    if (!name || name.length > 40) return false;
+    const profiles = profilesForEdit();
+    if (!profiles) return false;
     if (!profiles.list.some((p) => p.id === id)) return false;
     return loadProfile({ ...profiles, list: profiles.list.map((p) => p.id === id ? { ...p, name } : p) }, true);
   },
   deleteProfile(id: string) {
-    if (!flush()) return false;
-    const profiles = sanitizeProfiles(read(PROFILES_KEY) ?? state.profiles);
+    const profiles = profilesForEdit();
+    if (!profiles) return false;
     const list = profiles.list.filter((p) => p.id !== id);
     if (!list.length || list.length === profiles.list.length) return false;
     const keys: string[] = [];

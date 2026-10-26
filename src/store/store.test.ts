@@ -488,3 +488,21 @@ test("persistent storage is requested once and rejection is harmless", () => {
   assert.equal(store.switchProfile("default"), true);
   assert.equal(persistCalls, 1);
 });
+
+test("corrupt profile registry JSON does not block saving the active profile", () => {
+  for (const extra of [false, true]) {
+    if (extra) assert.equal(store.addProfile("Аня"), true);
+    const profiles = store.get().profiles;
+    const prefix = extra ? `word-atlas:p:${profiles.current}:` : "word-atlas:";
+    saved.set(profilesKey, "{invalid JSON");
+    events.dispatchEvent(Object.assign(new Event("storage"), { key: profilesKey, newValue: "{invalid JSON" }));
+    toggleBookmark("still-saved");
+    store.settings({ dailyNew: 30 });
+    assert.equal(flush(), true);
+    assert.equal(store.get().saveError, false);
+    assert.deepEqual(store.get().profiles, profiles);
+    assert.deepEqual(JSON.parse(saved.get(`${prefix}v2:${datasetId}`)!).bookmarks, ["still-saved"]);
+    assert.equal(JSON.parse(saved.get(`${prefix}settings`)!).dailyNew, 30);
+    assert.equal(saved.get(profilesKey), "{invalid JSON");
+  }
+});

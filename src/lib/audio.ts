@@ -55,13 +55,32 @@ async function speak(url: string | null | undefined, text: string, accent: "uk" 
     }
   }
   if (!("speechSynthesis" in window)) return "unsupported" as const;
+  let available = speechSynthesis.getVoices();
+  if (accent === "ru" && !available.length) {
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        speechSynthesis.removeEventListener("voiceschanged", changed);
+        if (cancel === done) cancel = null;
+        resolve();
+      };
+      const changed = () => { if (speechSynthesis.getVoices().length) done(); };
+      const timer = setTimeout(done, 1000);
+      cancel = done;
+      speechSynthesis.addEventListener("voiceschanged", changed);
+      changed();
+    });
+    if (mine !== token) return "stopped" as const;
+    available = speechSynthesis.getVoices();
+  }
   const u = new SpeechSynthesisUtterance(text);
   u.lang = accent === "ru" ? "ru-RU" : accent === "uk" ? "en-GB" : "en-US";
   u.rate = rate * 0.95;
-  const voices = speechSynthesis.getVoices().filter((v) => accent === "ru" ? /^ru(?:-|$)/i.test(v.lang.replace("_", "-")) : v.lang.replace("_", "-") === u.lang);
+  const voices = available.filter((v) => accent === "ru" ? /^ru(?:-|$)/i.test(v.lang.replace("_", "-")) : v.lang.replace("_", "-") === u.lang);
   const best = voices.find((v) => /premium|enhanced|natural|google/i.test(v.name)) || voices[0];
   if (accent === "ru" && !best) return "unsupported" as const;
   if (best) u.voice = best;
+  let ended = false;
   await new Promise<void>((r) => {
     const done = () => {
       u.onend = u.onerror = null;
@@ -69,8 +88,10 @@ async function speak(url: string | null | undefined, text: string, accent: "uk" 
       r();
     };
     cancel = done;
-    u.onend = u.onerror = done;
+    u.onend = () => { ended = true; done(); };
+    u.onerror = done;
     try { speechSynthesis.speak(u); } catch { done(); }
   });
-  return mine === token ? "device" as const : "stopped" as const;
+  if (mine !== token) return "stopped" as const;
+  return ended ? "device" as const : "unsupported" as const;
 }

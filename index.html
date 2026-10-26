@@ -22,7 +22,10 @@
       (function () {
         var t = "dark";
         try {
-          var s = JSON.parse(localStorage.getItem("word-atlas:settings") || "{}");
+          // Extra profiles keep settings under word-atlas:p:<id>:; the default profile uses the legacy key.
+          var p = JSON.parse(localStorage.getItem("word-atlas:profiles") || "{}");
+          var id = typeof p.current === "string" && p.current !== "default" && /^[a-zA-Z0-9_-]{1,80}$/.test(p.current) ? p.current : "";
+          var s = JSON.parse(localStorage.getItem(id ? "word-atlas:p:" + id + ":settings" : "word-atlas:settings") || "{}");
           if (s.theme) t = s.theme;
         } catch (e) {}
         if (t !== "system") document.documentElement.setAttribute("data-theme", t);

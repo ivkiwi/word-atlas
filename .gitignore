@@ -13,3 +13,4 @@ output/
 .codex/
 .claude/
 __pycache__/
+.word-atlas-export

@@ -160,11 +160,18 @@ export function Galaxy({
     if (mode !== "full") return;
     try {
       if (localStorage.getItem("word-atlas:galaxy-hello")) return;
-      localStorage.setItem("word-atlas:galaxy-hello", "1");
     } catch {
       return;
     }
-    const t = window.setTimeout(() => store.get().settings.sfx && void play(null, "Это ваша звёздная карта слов. Изучите слово, чтобы зажечь звезду.", "ru"), 900);
+    const t = window.setTimeout(async () => {
+      if (!store.get().settings.sfx) return;
+      try {
+        const result = await play(null, "Это ваша звёздная карта слов. Изучите слово, чтобы зажечь звезду.", "ru");
+        if (result === "device" || result === "recorded") localStorage.setItem("word-atlas:galaxy-hello", "1");
+      } catch {
+        /* leave the greeting available for a later visit */
+      }
+    }, 900);
     return () => clearTimeout(t);
   }, [mode]);
 
